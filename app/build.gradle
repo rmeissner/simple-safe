@@ -1,0 +1,90 @@
+apply plugin: 'com.android.application'
+
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-kapt'
+apply plugin: 'bivrost'
+
+android {
+    compileSdkVersion 28
+    defaultConfig {
+        applicationId "de.thegerman.simplesafe"
+        minSdkVersion 21
+        targetSdkVersion 28
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField javaTypes.STRING, "DAI_ADDRESS", asString(getKey("DAI_ADDRESS", "0x5592ec0cfb4dbc12d3ab100b257153436a1f0fea"))
+        buildConfigField javaTypes.STRING, "CDAI_ADDRESS", asString(getKey("CDAI_ADDRESS", "0x6d7f0754ffeb405d23c51ce938289d4835be3b14"))
+        buildConfigField javaTypes.STRING, "MULTI_SEND_ADDRESS", asString(getKey("MULTI_SEND_ADDRESS", "0xe74d6af1670fb6560dd61ee29eb57c7bc027ce4e"))
+
+        buildConfigField javaTypes.STRING, "INFURA_API_KEY", asString(getKey("INFURA_API_KEY", ""))
+        buildConfigField javaTypes.STRING, "BLOCKCHAIN_NET_URL", asString(getKey("BLOCKCHAIN_NET_URL", "https://rinkeby.infura.io/v3/"))
+        buildConfigField javaTypes.STRING, "RELAY_SERVICE_URL", asString(getKey("RELAY_SERVICE_URL", "https://safe-relay.rinkeby.gnosis.pm/api/"))
+
+        vectorDrawables.useSupportLibrary = true
+        project.ext.set("archivesBaseName", String.format("simple-safe-%s", defaultConfig.versionCode))
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${versions.kotlin}"
+
+    implementation "androidx.appcompat:appcompat:${versions.androidx_app_compat}"
+    implementation "androidx.core:core-ktx:${versions.androidx_core_ktx}"
+    implementation "androidx.constraintlayout:constraintlayout:${versions.androidx_constraint_layout}"
+    implementation "androidx.recyclerview:recyclerview:$versions.androidx_recycler_view"
+
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:$versions.androidx_lifecycle"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$versions.androidx_lifecycle"
+
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$versions.kotlinx_coroutines"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$versions.kotlinx_coroutines"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-rx2:$versions.kotlinx_coroutines"
+
+    implementation "com.github.gnosis.svalinn-kotlin:blockies:$versions.svalinn"
+    implementation "com.github.gnosis.svalinn-kotlin:crypto:$versions.svalinn"
+    implementation "com.github.gnosis.svalinn-kotlin:models:$versions.svalinn"
+    implementation "com.github.gnosis.svalinn-kotlin:utils:$versions.svalinn"
+    implementation "com.github.gnosis.svalinn-kotlin:android-common:$versions.svalinn"
+    implementation "com.github.gnosis.svalinn-kotlin:security:$versions.svalinn"
+    implementation "com.github.gnosis.svalinn-kotlin:mnemonic:$versions.svalinn"
+    implementation "com.github.gnosis.svalinn-kotlin:mnemonic-android:$versions.svalinn"
+
+    implementation "com.github.gnosis.bivrost-kotlin:bivrost-solidity-types:$versions.bivrost"
+
+    implementation "com.squareup.retrofit2:retrofit:$versions.retrofit"
+    implementation("com.squareup.retrofit2:converter-moshi:$versions.retrofit") {
+        exclude group: "com.squareup.moshi", module: "moshi"
+    }
+
+    implementation "com.squareup.picasso:picasso:$versions.picasso"
+
+    // Koin for Android
+    implementation "org.koin:koin-android:$versions.koin"
+    // Koin Android Scope features
+    implementation "org.koin:koin-android-scope:$versions.koin"
+    // Koin Android ViewModel features
+    implementation "org.koin:koin-android-viewmodel:$versions.koin"
+    // Koin Android Experimental features
+    implementation "org.koin:koin-android-ext:$versions.koin"
+
+    implementation "com.squareup.moshi:moshi:$versions.moshi"
+    kapt "com.squareup.moshi:moshi-kotlin-codegen:$versions.moshi"
+
+    implementation "com.squareup.okhttp3:okhttp:$versions.okhttp"
+
+    implementation "com.github.komputing:KHex:0.6"
+
+    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test:runner:1.2.0'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+}
