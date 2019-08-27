@@ -25,6 +25,7 @@ import pm.gnosis.svalinn.common.utils.edit
 import pm.gnosis.svalinn.security.EncryptionManager
 import pm.gnosis.utils.*
 import java.math.BigInteger
+import java.nio.charset.Charset
 
 interface SafeRepository {
     suspend fun loadSafe(): Safe
@@ -70,10 +71,13 @@ class SafeRepositoryImpl(
     }
 
     private fun getMnemonic() =
-        accountPrefs.getString(PREF_KEY_APP_MNEMONIC, null) ?: run {
-            val generateMnemonic = bip39.generateMnemonic(languageId = R.id.english)
+        (accountPrefs.getString(PREF_KEY_APP_MNEMONIC, null) ?: run {
+            val generateMnemonic =
+                encryptionManager.encrypt(bip39.generateMnemonic(languageId = R.id.english).toByteArray(Charset.defaultCharset())).toString()
             accountPrefs.edit { putString(PREF_KEY_APP_MNEMONIC, generateMnemonic) }
             generateMnemonic
+        }).let {
+            encryptionManager.decrypt(EncryptionManager.CryptoData.fromString(it)).toString(Charset.defaultCharset())
         }
 
     private suspend fun getSafeAddress() =
@@ -95,7 +99,8 @@ class SafeRepositoryImpl(
             creationParams.safe
         }
 
-    private fun getKeyPair(): KeyPair {
+    private suspend fun getKeyPair(): KeyPair {
+        encryptionManager.unlockWithPassword(ENC_PASSWORD.toByteArray()).await()
         val seed = bip39.mnemonicToSeed(getMnemonic())
         val hdNode = KeyGenerator.masterNode(ByteString.of(*seed))
         return hdNode.derive(KeyGenerator.BIP44_PATH_ETHEREUM).deriveChild(0).keyPair

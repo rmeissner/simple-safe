@@ -26,10 +26,36 @@ android {
         vectorDrawables.useSupportLibrary = true
         project.ext.set("archivesBaseName", String.format("simple-safe-%s", defaultConfig.versionCode))
     }
-    buildTypes {
+
+    signingConfigs {
+        debug {
+            // We add the debug keystore to repo so that the travis build will always have the same signature
+            storeFile file("../debug.keystore")
+        }
         release {
+            storeFile file(getKey("SIGNING_KEYFILE_PATH", "../keystore-upload.jks"))
+            storePassword getKey("SIGNING_STORE_PASSWORD")
+            keyAlias "gnosis"
+            keyPassword getKey("SIGNING_KEY_PASSWORD")
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ".debug"
+            versionNameSuffix "-debug"
             minifyEnabled false
+        }
+
+        release {
+            minifyEnabled true
+            signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField javaTypes.STRING, "DAI_ADDRESS", asString(getKey("DAI_ADDRESS", "0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359"))
+            buildConfigField javaTypes.STRING, "CDAI_ADDRESS", asString(getKey("CDAI_ADDRESS", "0xf5dce57282a584d2746faf1593d3121fcac444dc"))
+
+            buildConfigField javaTypes.STRING, "BLOCKCHAIN_NET_URL", asString(getKey("BLOCKCHAIN_NET_URL", "https://mainnet.infura.io/v3/"))
+            buildConfigField javaTypes.STRING, "RELAY_SERVICE_URL", asString(getKey("RELAY_SERVICE_URL", "https://safe-relay.gnosis.pm/api/"))
         }
     }
 }
