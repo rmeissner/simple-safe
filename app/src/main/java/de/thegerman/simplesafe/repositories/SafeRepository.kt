@@ -28,7 +28,12 @@ import java.math.BigInteger
 import java.nio.charset.Charset
 
 interface SafeRepository {
+
+    fun isInitialized(): Boolean
+
     suspend fun loadSafe(): Safe
+
+    suspend fun loadMnemonic(): String
 
     suspend fun checkStatus(): Safe.Status
 
@@ -41,6 +46,7 @@ interface SafeRepository {
     data class Safe(val address: Solidity.Address, val status: Status) {
         sealed class Status {
             object Ready : Status()
+            object Unknown : Status()
             data class Unfunded(val paymentAmount: BigInteger) : Status()
             data class Deploying(val transactionHash: String) : Status()
         }
@@ -52,6 +58,8 @@ interface SafeRepository {
         CALL(0),
         DELEGATE(1)
     }
+
+    suspend fun recover(safe: Solidity.Address, mnemonic: String)
 }
 
 class SafeRepositoryImpl(
@@ -64,14 +72,31 @@ class SafeRepositoryImpl(
 
     private val accountPrefs = context.getSharedPreferences(ACC_PREF_NAME, Context.MODE_PRIVATE)
 
-    override suspend fun loadSafe(): Safe {
+    override fun isInitialized(): Boolean =
+        accountPrefs.getString(PREF_KEY_APP_MNEMONIC, null) != null
+
+    override suspend fun recover(safe: Solidity.Address, mnemonic: String) {
+        enforceEncryption()
+        accountPrefs.edit {
+            bip39.validateMnemonic(mnemonic)
+            putString(PREF_KEY_APP_MNEMONIC, encryptionManager.encrypt(mnemonic.toByteArray(Charset.defaultCharset())).toString())
+            putString(PREF_KEY_SAFE_ADDRESS, safe.asEthereumAddressString())
+        }
+    }
+
+    private suspend fun enforceEncryption() {
         if (!encryptionManager.initialized().await() && !encryptionManager.setupPassword(ENC_PASSWORD.toByteArray()).await())
             throw RuntimeException("Could not setup encryption")
+    }
+
+    override suspend fun loadSafe(): Safe {
+        enforceEncryption()
         return Safe(getSafeAddress(), getSafeStatus())
     }
 
-    private fun getMnemonic() =
-        (accountPrefs.getString(PREF_KEY_APP_MNEMONIC, null) ?: run {
+    override suspend fun loadMnemonic(): String {
+        encryptionManager.unlockWithPassword(ENC_PASSWORD.toByteArray()).await()
+        return (accountPrefs.getString(PREF_KEY_APP_MNEMONIC, null) ?: run {
             val generateMnemonic =
                 encryptionManager.encrypt(bip39.generateMnemonic(languageId = R.id.english).toByteArray(Charset.defaultCharset())).toString()
             accountPrefs.edit { putString(PREF_KEY_APP_MNEMONIC, generateMnemonic) }
@@ -79,6 +104,7 @@ class SafeRepositoryImpl(
         }).let {
             encryptionManager.decrypt(EncryptionManager.CryptoData.fromString(it)).toString(Charset.defaultCharset())
         }
+    }
 
     private suspend fun getSafeAddress() =
         accountPrefs.getString(PREF_KEY_SAFE_ADDRESS, null)?.asEthereumAddress() ?: run {
@@ -88,8 +114,8 @@ class SafeRepositoryImpl(
                     listOf(address),
                     1,
                     System.currentTimeMillis(),
-                    "0x0".asEthereumAddress()!!
-                ) // DEBUG: BuildConfig.DAI_ADDRESS.asEthereumAddress()!!
+                    BuildConfig.DAI_ADDRESS.asEthereumAddress()!!
+                )
             )
             // TODO: check response
             accountPrefs.edit {
@@ -100,8 +126,7 @@ class SafeRepositoryImpl(
         }
 
     private suspend fun getKeyPair(): KeyPair {
-        encryptionManager.unlockWithPassword(ENC_PASSWORD.toByteArray()).await()
-        val seed = bip39.mnemonicToSeed(getMnemonic())
+        val seed = bip39.mnemonicToSeed(loadMnemonic())
         val hdNode = KeyGenerator.masterNode(ByteString.of(*seed))
         return hdNode.derive(KeyGenerator.BIP44_PATH_ETHEREUM).deriveChild(0).keyPair
     }
@@ -109,21 +134,24 @@ class SafeRepositoryImpl(
     private fun getSafeStatus() =
         accountPrefs.getString(PREF_KEY_SAFE_CREATION_TX, null)?.let { Safe.Status.Deploying(it) }
             ?: accountPrefs.getString(PREF_KEY_SAFE_PAYMENT_AMOUNT, null)?.let { Safe.Status.Unfunded(it.hexAsBigInteger()) }
-            ?: Safe.Status.Ready
+            ?: accountPrefs.getString(PREF_KEY_SAFE_BLOCK, null)?.let { Safe.Status.Ready }
+            ?: Safe.Status.Unknown
 
     override suspend fun checkStatus(): Safe.Status =
-        getSafeStatus().let {
-            when (getSafeStatus()) {
-                is Safe.Status.Ready -> Safe.Status.Ready
-                is Safe.Status.Unfunded, is Safe.Status.Deploying -> checkRelay(it)
-            }
+        when (val status = getSafeStatus()) {
+            is Safe.Status.Ready -> Safe.Status.Ready
+            is Safe.Status.Unknown, is Safe.Status.Unfunded, is Safe.Status.Deploying -> checkRelay(status)
         }
 
     private suspend fun checkRelay(currentStatus: Safe.Status): Safe.Status {
         val status = relayServiceApi.safeFundStatus(getSafeAddress().asEthereumAddressChecksumString())
         accountPrefs.edit { putString(PREF_KEY_SAFE_CREATION_TX, status.txHash) }
-        return if (status.txHash == null) currentStatus else
-            if (status.blockNumber == null) Safe.Status.Deploying(status.txHash) else Safe.Status.Ready
+        accountPrefs.edit { putString(PREF_KEY_SAFE_BLOCK, status.blockNumber?.toString()) }
+        return when {
+            status.txHash == null -> currentStatus
+            status.blockNumber == null -> Safe.Status.Deploying(status.txHash)
+            else -> Safe.Status.Ready
+        }
     }
 
     override suspend fun loadSafeBalances(): SafeRepository.SafeBalances {
@@ -283,6 +311,7 @@ class SafeRepositoryImpl(
         private const val PREF_KEY_APP_MNEMONIC = "accounts.string.app_menmonic"
         private const val PREF_KEY_SAFE_ADDRESS = "accounts.string.safe_address"
         private const val PREF_KEY_SAFE_PAYMENT_AMOUNT = "accounts.string.safe_payment_amount"
+        private const val PREF_KEY_SAFE_BLOCK = "accounts.string.safe_block"
         private const val PREF_KEY_SAFE_CREATION_TX = "accounts.string.safe_creation_tx"
         private const val ENC_PASSWORD = "ThisShouldNotBeHardcoded"
     }

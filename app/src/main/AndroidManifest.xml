@@ -20,13 +20,13 @@
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
         <activity android:name="de.thegerman.simplesafe.ui.main.MainActivity">
+        </activity>
+        <activity android:name=".ui.intro.IntroActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-        <activity android:name="de.thegerman.simplesafe.ui.moon.BuyDaiActivity">
         </activity>
     </application>
 

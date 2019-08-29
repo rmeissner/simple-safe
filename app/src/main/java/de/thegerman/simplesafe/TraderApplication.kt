@@ -8,8 +8,11 @@ import de.thegerman.simplesafe.data.RelayServiceApi
 import de.thegerman.simplesafe.data.adapter.*
 import de.thegerman.simplesafe.repositories.SafeRepository
 import de.thegerman.simplesafe.repositories.SafeRepositoryImpl
+import de.thegerman.simplesafe.ui.intro.IntroViewModel
+import de.thegerman.simplesafe.ui.intro.IntroViewModelContract
 import de.thegerman.simplesafe.ui.main.MainViewModel
 import de.thegerman.simplesafe.ui.main.MainViewModelContract
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.viewmodel.dsl.viewModel
@@ -72,8 +75,10 @@ class TraderApplication : Application() {
         single<SafeRepository> { SafeRepositoryImpl(get(), get(), get(), get(), get()) }
     }
 
+    @ExperimentalCoroutinesApi
     private val viewModelModule = module {
         viewModel<MainViewModelContract> { MainViewModel(get()) }
+        viewModel<IntroViewModelContract> { IntroViewModel(get(), get()) }
     }
 
     private val apiModule = module {

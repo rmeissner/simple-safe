@@ -17,8 +17,8 @@ import pm.gnosis.utils.asEthereumAddress
 import pm.gnosis.utils.hexStringToByteArray
 import java.math.BigInteger
 
-abstract class MainViewModelContract : BaseViewModel() {
-    abstract val state: LiveData<State>
+@ExperimentalCoroutinesApi
+abstract class MainViewModelContract : BaseViewModel<MainViewModelContract.State>() {
 
     data class State(
         val loading: Boolean,
@@ -26,12 +26,8 @@ abstract class MainViewModelContract : BaseViewModel() {
         val safe: SafeRepository.Safe?,
         val balances: SafeRepository.SafeBalances?,
         val submitting: Boolean,
-        var viewAction: ViewAction?
-    )
-
-    sealed class ViewAction {
-        data class ShowToast(val message: String) : ViewAction()
-    }
+        override var viewAction: ViewAction?
+    ): BaseViewModel.State
 
     abstract fun loadSafe()
     abstract fun investAll()
@@ -41,32 +37,11 @@ abstract class MainViewModelContract : BaseViewModel() {
 class MainViewModel(
     private val safeRepository: SafeRepository
 ) : MainViewModelContract() {
-    private val stateChannel =
-        ConflatedBroadcastChannel(State(loading = false, showRetry = false, safe = null, balances = null, submitting = false, viewAction = null))
-
-    private val coroutineErrorHandler = CoroutineExceptionHandler { _, e ->
-        e.printStackTrace()
-        viewModelScope.launch { updateState { copy(viewAction = ViewAction.ShowToast(e.message ?: "An error occurred")) } }
-    }
+    override fun initialState() = State(loading = false, showRetry = false, safe = null, balances = null, submitting = false, viewAction = null)
 
     override val state = liveData {
         loadSafe()
         for (state in stateChannel.openSubscription()) emit(state)
-    }
-
-    private fun currentState() = stateChannel.value
-
-    private suspend fun updateState(update: State.() -> State) {
-        try {
-            val currentState = currentState()
-            val nextState = currentState.run(update)
-            // Reset view action if the same
-            stateChannel.send(if (nextState.viewAction === currentState.viewAction) nextState.copy(viewAction = null) else nextState)
-        } catch (e: Exception) {
-            // Could not submit update
-            e.printStackTrace()
-            Log.e("#####", "error: $e")
-        }
     }
 
     /*

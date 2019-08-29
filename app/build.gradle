@@ -47,6 +47,20 @@ android {
             minifyEnabled false
         }
 
+        nyan {
+            applicationIdSuffix ".nyan"
+            versionNameSuffix "-nyan"
+            minifyEnabled false
+            debuggable true
+            signingConfig signingConfigs.debug
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField javaTypes.STRING, "DAI_ADDRESS", asString(getKey("DAI_ADDRESS", "0x89d24a6b4ccb1b6faa2625fe562bdd9a23260359"))
+            buildConfigField javaTypes.STRING, "CDAI_ADDRESS", asString(getKey("CDAI_ADDRESS", "0xf5dce57282a584d2746faf1593d3121fcac444dc"))
+
+            buildConfigField javaTypes.STRING, "BLOCKCHAIN_NET_URL", asString(getKey("BLOCKCHAIN_NET_URL", "https://mainnet.infura.io/v3/"))
+            buildConfigField javaTypes.STRING, "RELAY_SERVICE_URL", asString(getKey("RELAY_SERVICE_URL", "https://safe-relay.gnosis.pm/api/"))
+        }
+
         release {
             minifyEnabled true
             signingConfig signingConfigs.release
@@ -109,6 +123,8 @@ dependencies {
     implementation "com.squareup.okhttp3:okhttp:$versions.okhttp"
 
     implementation "com.github.komputing:KHex:0.6"
+
+    implementation 'com.google.android.gms:play-services-auth:17.0.0'
 
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test:runner:1.2.0'
