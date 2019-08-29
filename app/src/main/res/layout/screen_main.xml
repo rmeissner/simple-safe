@@ -8,19 +8,6 @@
     tools:context=".ui.main.MainActivity">
 
     <Button
-        android:id="@+id/main_invest_btn"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:backgroundTint="@color/colorPrimary"
-        android:text="Invest"
-        android:textColor="@color/white"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:visibility="visible" />
-
-    <Button
         android:id="@+id/main_retry_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -34,17 +21,26 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:visibility="visible" />
 
-    <TextView
-        android:id="@+id/main_status"
+    <Button
+        android:id="@+id/main_withdraw_btn"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="8dp"
-        android:gravity="center"
-        android:textColor="@color/colorAccent"
+        android:backgroundTint="@color/colorAccent"
+        android:text="Withdraw"
+        android:layout_marginTop="16dp"
+        android:textColor="@color/white"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/main_account_img"
-        tools:text="Safe needs funding" />
+        app:layout_constraintTop_toBottomOf="@id/main_pending_txt" />
+
+    <ProgressBar
+        android:id="@+id/main_status_progress"
+        style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="4dp"
+        android:indeterminate="true"
+        android:padding="0dp"
+        app:layout_constraintBottom_toTopOf="@id/main_status_txt" />
 
     <ProgressBar
         android:id="@+id/main_progress"
@@ -56,59 +52,61 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <TextView
-        android:id="@+id/main_dai_balance_lbl"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="48dp"
-        android:gravity="center"
-        android:text="Available Dai"
-        app:layout_constraintBottom_toTopOf="@id/main_dai_balance_value"
+        android:id="@+id/main_status_txt"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@color/colorPrimary"
+        android:drawableEnd="@drawable/ic_open_in_new_24dp"
+        android:gravity="center_vertical"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:text="Processing action"
+        android:textColor="@color/white"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/main_account_address"
-        app:layout_constraintVertical_chainStyle="packed" />
+        tools:visibility="visible" />
 
     <TextView
-        android:id="@+id/main_dai_balance_value"
+        android:id="@+id/main_creation_status_txt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="8dp"
+        android:gravity="center"
+        android:textColor="@color/colorAccent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/main_account_img"
+        tools:text="Safe needs funding" />
+
+    <TextView
+        android:id="@+id/main_pending_txt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center"
         android:text="-"
-        android:textSize="48sp"
+        android:textSize="12sp"
         android:textStyle="bold"
-        app:layout_constraintBottom_toTopOf="@id/main_cdai_balance_lbl"
+        app:layout_constraintBottom_toTopOf="@id/main_status_txt"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/main_dai_balance_lbl"
+        app:layout_constraintTop_toBottomOf="@id/main_balance_txt"
         app:layout_constraintVertical_chainStyle="packed"
         tools:text="500.589" />
 
     <TextView
-        android:id="@+id/main_cdai_balance_lbl"
+        android:id="@+id/main_balance_txt"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="48dp"
-        android:gravity="center"
-        android:text="Invested Dai"
-        app:layout_constraintBottom_toTopOf="@id/main_cdai_balance_value"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/main_dai_balance_value"
-        app:layout_constraintVertical_chainStyle="packed" />
-
-    <TextView
-        android:id="@+id/main_cdai_balance_value"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="40dp"
         android:gravity="center"
         android:text="-"
         android:textSize="48sp"
         android:textStyle="bold"
-        app:layout_constraintBottom_toTopOf="@id/main_invest_btn"
+        app:layout_constraintBottom_toTopOf="@id/main_pending_txt"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/main_cdai_balance_lbl"
+        app:layout_constraintTop_toBottomOf="@id/main_creation_status_txt"
         app:layout_constraintVertical_chainStyle="packed"
         app:layout_goneMarginBottom="96dp"
         tools:text="500.589" />
@@ -129,7 +127,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:visibility="gone"
-        app:constraint_referenced_ids="main_cdai_balance_lbl,main_cdai_balance_value,main_dai_balance_lbl,main_dai_balance_value"
+        app:constraint_referenced_ids="main_balance_txt,main_pending_txt,main_withdraw_btn"
         tools:visibility="visible" />
 
     <androidx.constraintlayout.widget.Group

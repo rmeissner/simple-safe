@@ -5,12 +5,10 @@ import de.thegerman.simplesafe.BuildConfig
 import de.thegerman.simplesafe.R
 import de.thegerman.simplesafe.data.JsonRpcApi
 import de.thegerman.simplesafe.data.RelayServiceApi
-import de.thegerman.simplesafe.data.models.RelaySafeCreationParams
 import de.thegerman.simplesafe.repositories.SafeRepository.Safe
 import de.thegerman.simplesafe.Compound
-import de.thegerman.simplesafe.data.models.EstimateParams
-import de.thegerman.simplesafe.data.models.ExecuteParams
-import de.thegerman.simplesafe.data.models.ServiceSignature
+import de.thegerman.simplesafe.GnosisSafe
+import de.thegerman.simplesafe.data.models.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.rx2.await
@@ -24,6 +22,7 @@ import pm.gnosis.model.Solidity
 import pm.gnosis.svalinn.common.utils.edit
 import pm.gnosis.svalinn.security.EncryptionManager
 import pm.gnosis.utils.*
+import java.lang.IllegalStateException
 import java.math.BigInteger
 import java.nio.charset.Charset
 
@@ -41,7 +40,16 @@ interface SafeRepository {
 
     suspend fun triggerSafeDeployment()
 
-    suspend fun submitSafeTransaction(to: Solidity.Address, value: BigInteger, data: String, operation: SafeTxOperation): String
+    suspend fun submitSafeTransaction(
+        transaction: SafeTx,
+        execInfo: SafeTxExecInfo
+    ): String
+
+    suspend fun recover(safe: Solidity.Address, mnemonic: String)
+
+    suspend fun safeTransactionExecInfo(transaction: SafeTx): SafeTxExecInfo
+
+    suspend fun checkPendingTransaction(): TxStatus?
 
     data class Safe(val address: Solidity.Address, val status: Status) {
         sealed class Status {
@@ -54,12 +62,34 @@ interface SafeRepository {
 
     data class SafeBalances(val daiBalance: BigInteger, val cdaiBalance: BigInteger)
 
-    enum class SafeTxOperation(val id: Int) {
-        CALL(0),
-        DELEGATE(1)
+    data class SafeTx(
+        val to: Solidity.Address,
+        val value: BigInteger,
+        val data: String,
+        val operation: Operation
+    ) {
+
+        enum class Operation(val id: Int) {
+            CALL(0),
+            DELEGATE(1)
+        }
     }
 
-    suspend fun recover(safe: Solidity.Address, mnemonic: String)
+    data class SafeTxExecInfo(
+        val baseGas: BigInteger,
+        val txGas: BigInteger,
+        val gasPrice: BigInteger,
+        val gasToken: Solidity.Address,
+        val nonce: BigInteger
+    )
+
+    sealed class TxStatus {
+        abstract val hash: String
+
+        data class Pending(override val hash: String) : TxStatus()
+        data class Success(override val hash: String) : TxStatus()
+        data class Failed(override val hash: String) : TxStatus()
+    }
 }
 
 class SafeRepositoryImpl(
@@ -114,7 +144,7 @@ class SafeRepositoryImpl(
                     listOf(address),
                     1,
                     System.currentTimeMillis(),
-                    BuildConfig.DAI_ADDRESS.asEthereumAddress()!!
+                    "0x0".asEthereumAddress()!! //BuildConfig.DAI_ADDRESS.asEthereumAddress()!!
                 )
             )
             // TODO: check response
@@ -152,6 +182,19 @@ class SafeRepositoryImpl(
             status.blockNumber == null -> Safe.Status.Deploying(status.txHash)
             else -> Safe.Status.Ready
         }
+    }
+
+    override suspend fun checkPendingTransaction(): SafeRepository.TxStatus? {
+        val txHash = accountPrefs.getString(PREF_KEY_PENDING_TRANSACTION_HASH, null) ?: return null
+        val response = jsonRpcApi.receipt(JsonRpcApi.JsonRpcRequest(method = "eth_getTransactionReceipt", params = listOf(txHash)))
+        response.error?.let { throw RuntimeException(response.error.message) }
+        val receipt = response.result ?: return SafeRepository.TxStatus.Pending(txHash)
+        accountPrefs.edit { remove(PREF_KEY_PENDING_TRANSACTION_HASH) }
+        if (receipt.status == BigInteger.ZERO) return SafeRepository.TxStatus.Failed(txHash)
+        receipt.logs.forEach {
+            if (it.topics.firstOrNull() == GnosisSafe.Events.ExecutionFailed.EVENT_ID) return SafeRepository.TxStatus.Failed(txHash)
+        }
+        return SafeRepository.TxStatus.Success(txHash)
     }
 
     override suspend fun loadSafeBalances(): SafeRepository.SafeBalances {
@@ -193,52 +236,69 @@ class SafeRepositoryImpl(
         relayServiceApi.notifySafeFunded(getSafeAddress().asEthereumAddressChecksumString())
     }
 
-    override suspend fun submitSafeTransaction(
-        to: Solidity.Address,
-        value: BigInteger,
-        data: String,
-        operation: SafeRepository.SafeTxOperation
-    ): String {
+    override suspend fun safeTransactionExecInfo(
+        transaction: SafeRepository.SafeTx
+    ): SafeRepository.SafeTxExecInfo {
         val safeAddress = getSafeAddress()
         val gasToken = BuildConfig.DAI_ADDRESS.asEthereumAddress()!!
         val estimate = relayServiceApi.estimate(
             safeAddress.asEthereumAddressChecksumString(), EstimateParams(
-                to.asEthereumAddressChecksumString(), value.asDecimalString(), data, operation.id, 1, gasToken
+                transaction.to.asEthereumAddressChecksumString(),
+                transaction.value.asDecimalString(),
+                transaction.data,
+                transaction.operation.id,
+                1,
+                gasToken
             )
         )
-        println("estimate $estimate")
-        val nonce = estimate.lastUsedNonce?.decimalAsBigInteger()?.let { it + BigInteger.ONE } ?: BigInteger.ZERO
+        return SafeRepository.SafeTxExecInfo(
+            estimate.dataGas.decimalAsBigInteger(),
+            estimate.safeTxGas.decimalAsBigInteger(),
+            estimate.gasPrice.decimalAsBigInteger(),
+            estimate.gasToken,
+            estimate.lastUsedNonce?.decimalAsBigInteger()?.let { it + BigInteger.ONE } ?: BigInteger.ZERO
+        )
+    }
+
+    override suspend fun submitSafeTransaction(
+        transaction: SafeRepository.SafeTx,
+        execInfo: SafeRepository.SafeTxExecInfo
+    ): String {
+        val safeAddress = getSafeAddress()
+        println("estimate $execInfo")
+        val nonce = execInfo.nonce
         val hash =
             calculateHash(
                 safeAddress,
-                to,
-                value,
-                data,
-                operation,
-                estimate.safeTxGas.decimalAsBigInteger(),
-                estimate.dataGas.decimalAsBigInteger(),
-                estimate.gasPrice.decimalAsBigInteger(),
-                estimate.gasToken,
+                transaction.to,
+                transaction.value,
+                transaction.data,
+                transaction.operation,
+                execInfo.txGas,
+                execInfo.baseGas,
+                execInfo.gasPrice,
+                execInfo.gasToken,
                 nonce
             )
-        println("hash $hash")
+
         val signature = getKeyPair().sign(hash)
         val response = relayServiceApi.execute(
             safeAddress.asEthereumAddressChecksumString(),
             ExecuteParams(
-                to.asEthereumAddressChecksumString(),
-                value.asDecimalString(),
-                data,
-                operation.id,
+                transaction.to.asEthereumAddressChecksumString(),
+                transaction.value.asDecimalString(),
+                transaction.data,
+                transaction.operation.id,
                 listOf(ServiceSignature.fromSignature(signature)),
-                estimate.safeTxGas,
-                estimate.dataGas,
-                estimate.gasPrice,
-                estimate.gasToken.asEthereumAddressChecksumString(),
+                execInfo.txGas.asDecimalString(),
+                execInfo.baseGas.asDecimalString(),
+                execInfo.gasPrice.asDecimalString(),
+                execInfo.gasToken.asEthereumAddressChecksumString(),
                 nonce.toLong()
             )
         )
         println("execute $response")
+        accountPrefs.edit { putString(PREF_KEY_PENDING_TRANSACTION_HASH, response.transactionHash) }
         return response.transactionHash
     }
 
@@ -247,7 +307,7 @@ class SafeRepositoryImpl(
         txTo: Solidity.Address,
         txValue: BigInteger,
         txData: String?,
-        txOperation: SafeRepository.SafeTxOperation,
+        txOperation: SafeRepository.SafeTx.Operation,
         txGas: BigInteger,
         dataGas: BigInteger,
         gasPrice: BigInteger,
@@ -308,11 +368,16 @@ class SafeRepositoryImpl(
         private const val ERC191_VERSION = "01"
 
         private const val ACC_PREF_NAME = "AccountRepositoryImpl_Preferences"
+
         private const val PREF_KEY_APP_MNEMONIC = "accounts.string.app_menmonic"
+
         private const val PREF_KEY_SAFE_ADDRESS = "accounts.string.safe_address"
         private const val PREF_KEY_SAFE_PAYMENT_AMOUNT = "accounts.string.safe_payment_amount"
         private const val PREF_KEY_SAFE_BLOCK = "accounts.string.safe_block"
         private const val PREF_KEY_SAFE_CREATION_TX = "accounts.string.safe_creation_tx"
+
+        private const val PREF_KEY_PENDING_TRANSACTION_HASH = "accounts.string.pending_transaction_hash"
+
         private const val ENC_PASSWORD = "ThisShouldNotBeHardcoded"
     }
 }

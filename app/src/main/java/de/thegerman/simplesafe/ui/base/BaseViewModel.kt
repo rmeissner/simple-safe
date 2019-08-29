@@ -45,7 +45,6 @@ abstract class BaseViewModel<T : BaseViewModel.State> : ViewModel() {
         }
     }
 
-    protected fun safeLaunch(errorHandler: CoroutineExceptionHandler = coroutineErrorHandler, block: suspend CoroutineScope.() -> Unit) {
+    protected fun safeLaunch(errorHandler: CoroutineExceptionHandler = coroutineErrorHandler, block: suspend CoroutineScope.() -> Unit) =
         viewModelScope.launch(Dispatchers.IO + errorHandler, block = block)
-    }
 }

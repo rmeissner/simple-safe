@@ -12,6 +12,8 @@ import de.thegerman.simplesafe.ui.intro.IntroViewModel
 import de.thegerman.simplesafe.ui.intro.IntroViewModelContract
 import de.thegerman.simplesafe.ui.main.MainViewModel
 import de.thegerman.simplesafe.ui.main.MainViewModelContract
+import de.thegerman.simplesafe.ui.withdraw.WithdrawViewModel
+import de.thegerman.simplesafe.ui.withdraw.WithdrawViewModelContract
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
@@ -79,6 +81,7 @@ class TraderApplication : Application() {
     private val viewModelModule = module {
         viewModel<MainViewModelContract> { MainViewModel(get()) }
         viewModel<IntroViewModelContract> { IntroViewModel(get(), get()) }
+        viewModel<WithdrawViewModelContract> { WithdrawViewModel(get()) }
     }
 
     private val apiModule = module {

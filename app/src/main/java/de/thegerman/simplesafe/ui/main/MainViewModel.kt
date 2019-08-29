@@ -26,18 +26,21 @@ abstract class MainViewModelContract : BaseViewModel<MainViewModelContract.State
         val safe: SafeRepository.Safe?,
         val balances: SafeRepository.SafeBalances?,
         val submitting: Boolean,
+        val txHash: String?,
         override var viewAction: ViewAction?
-    ): BaseViewModel.State
+    ) : BaseViewModel.State
 
     abstract fun loadSafe()
     abstract fun investAll()
+    abstract fun updatePendingTxState()
 }
 
 @ExperimentalCoroutinesApi
 class MainViewModel(
     private val safeRepository: SafeRepository
 ) : MainViewModelContract() {
-    override fun initialState() = State(loading = false, showRetry = false, safe = null, balances = null, submitting = false, viewAction = null)
+    override fun initialState() =
+        State(loading = false, showRetry = false, safe = null, balances = null, submitting = false, txHash = null, viewAction = null)
 
     override val state = liveData {
         loadSafe()
@@ -61,6 +64,7 @@ class MainViewModel(
             updateState { copy(loading = false, safe = safe) }
             launch { monitorState(safe) }
             launch { monitorBalances() }
+            launch { monitorPendingTx() }
         }
     }
 
@@ -86,8 +90,13 @@ class MainViewModel(
                 Log.d("#####", "Check balances")
                 val balances = updateBalances()
 
-                (currentState().safe?.status as? SafeRepository.Safe.Status.Unfunded)?.let {
-                    if (it.paymentAmount <= balances.daiBalance) safeRepository.triggerSafeDeployment()
+                when (val status = currentState().safe?.status) {
+                    is SafeRepository.Safe.Status.Unfunded -> {
+                        if (status.paymentAmount <= balances.daiBalance) safeRepository.triggerSafeDeployment()
+                    }
+                    is SafeRepository.Safe.Status.Ready -> {
+                        if (balances.daiBalance >= ONE_DAI) investAll()
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("#####", "Check balances error: $e")
@@ -103,6 +112,45 @@ class MainViewModel(
     }
 
     /*
+     * Transactions
+     */
+
+    override fun updatePendingTxState() {
+        safeLaunch {
+            checkPendingTx()
+        }
+    }
+
+    private suspend fun monitorPendingTx() {
+        // Check balances continuously
+        while (true) {
+            try {
+                Log.d("#####", "Check pending tx")
+                checkPendingTx()
+            } catch (e: Exception) {
+                Log.e("#####", "Check pending tx error: $e")
+            }
+            delay(15000)
+        }
+    }
+
+    private suspend fun checkPendingTx() {
+        when (val txState = safeRepository.checkPendingTransaction()) {
+            is SafeRepository.TxStatus.Pending ->
+                updateState { copy(txHash = txState.hash) }
+            is SafeRepository.TxStatus.Success -> {
+                updateBalances()
+                updateState { copy(txHash = null) }
+            }
+            is SafeRepository.TxStatus.Failed ->
+                updateState { copy(txHash = null, viewAction = ViewAction.ShowToast("Transaction failed")) }
+            else ->
+                updateState { copy(txHash = null) }
+        }
+    }
+
+
+    /*
      * Investing
      */
 
@@ -111,37 +159,50 @@ class MainViewModel(
             updateState { copy(submitting = true) }
             try {
                 val balance = currentState().balances?.daiBalance ?: return@launch
-                val amount = balance - BigInteger.ONE.multiply(BigInteger.TEN.pow(18))
+                val amount = balance - ONE_DAI.div(BigInteger.valueOf(2))
                 if (amount < BigInteger.ZERO) return@launch
-                val approveData = Compound.Approve.encode(BuildConfig.CDAI_ADDRESS.asEthereumAddress()!!, Solidity.UInt256(amount))
-                val mintData = Compound.Mint.encode(Solidity.UInt256(amount))
-                val data = MultiSend.MultiSend.encode(
-                    Solidity.Bytes(
-                        (SolidityBase.encodeFunctionArguments(
-                            Solidity.UInt8(BigInteger.ZERO),
-                            BuildConfig.DAI_ADDRESS.asEthereumAddress()!!,
-                            Solidity.UInt256(BigInteger.ZERO),
-                            Solidity.Bytes(approveData.hexStringToByteArray())
-                        ) + SolidityBase.encodeFunctionArguments(
-                            Solidity.UInt8(BigInteger.ZERO),
-                            BuildConfig.CDAI_ADDRESS.asEthereumAddress()!!,
-                            Solidity.UInt256(BigInteger.ZERO),
-                            Solidity.Bytes(mintData.hexStringToByteArray())
-                        ))
-                            .hexStringToByteArray()
-                    )
-                )
-                val txHash = safeRepository.submitSafeTransaction(
-                    BuildConfig.MULTI_SEND_ADDRESS.asEthereumAddress()!!,
-                    BigInteger.ZERO,
-                    data,
-                    SafeRepository.SafeTxOperation.DELEGATE
-                )
-                Log.d("#####", "tx hash: $txHash")
+                val execInfo = safeRepository.safeTransactionExecInfo(buildInvestTx(amount))
+                val txHash = safeRepository.submitSafeTransaction(buildInvestTx(amount), execInfo)
+                updateState { copy(txHash = txHash) }
             } finally {
                 updateState { copy(submitting = false) }
             }
             updateBalances()
         }
+    }
+
+    private fun buildInvestTx(amount: BigInteger) =
+        SafeRepository.SafeTx(
+            BuildConfig.MULTI_SEND_ADDRESS.asEthereumAddress()!!,
+            BigInteger.ZERO,
+            buildInvestData(amount),
+            SafeRepository.SafeTx.Operation.DELEGATE
+        )
+
+    private fun buildInvestData(amount: BigInteger) =
+        MultiSend.MultiSend.encode(
+            Solidity.Bytes(
+                (SolidityBase.encodeFunctionArguments(
+                    Solidity.UInt8(BigInteger.ZERO),
+                    BuildConfig.DAI_ADDRESS.asEthereumAddress()!!,
+                    Solidity.UInt256(BigInteger.ZERO),
+                    Solidity.Bytes(
+                        Compound.Approve.encode(
+                            BuildConfig.CDAI_ADDRESS.asEthereumAddress()!!,
+                            Solidity.UInt256(amount)
+                        ).hexStringToByteArray()
+                    )
+                ) + SolidityBase.encodeFunctionArguments(
+                    Solidity.UInt8(BigInteger.ZERO),
+                    BuildConfig.CDAI_ADDRESS.asEthereumAddress()!!,
+                    Solidity.UInt256(BigInteger.ZERO),
+                    Solidity.Bytes(Compound.Mint.encode(Solidity.UInt256(amount)).hexStringToByteArray())
+                ))
+                    .hexStringToByteArray()
+            )
+        )
+
+    companion object {
+        private val ONE_DAI = BigInteger.ONE.multiply(BigInteger.TEN.pow(18))
     }
 }
