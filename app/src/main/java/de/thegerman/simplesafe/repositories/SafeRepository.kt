@@ -2,13 +2,16 @@ package de.thegerman.simplesafe.repositories
 
 import android.content.Context
 import de.thegerman.simplesafe.BuildConfig
+import de.thegerman.simplesafe.Compound
+import de.thegerman.simplesafe.GnosisSafe
 import de.thegerman.simplesafe.R
 import de.thegerman.simplesafe.data.JsonRpcApi
 import de.thegerman.simplesafe.data.RelayServiceApi
+import de.thegerman.simplesafe.data.models.EstimateParams
+import de.thegerman.simplesafe.data.models.ExecuteParams
+import de.thegerman.simplesafe.data.models.RelaySafeCreationParams
+import de.thegerman.simplesafe.data.models.ServiceSignature
 import de.thegerman.simplesafe.repositories.SafeRepository.Safe
-import de.thegerman.simplesafe.Compound
-import de.thegerman.simplesafe.GnosisSafe
-import de.thegerman.simplesafe.data.models.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.rx2.await
@@ -22,7 +25,6 @@ import pm.gnosis.model.Solidity
 import pm.gnosis.svalinn.common.utils.edit
 import pm.gnosis.svalinn.security.EncryptionManager
 import pm.gnosis.utils.*
-import java.lang.IllegalStateException
 import java.math.BigInteger
 import java.nio.charset.Charset
 
@@ -51,6 +53,10 @@ interface SafeRepository {
 
     suspend fun checkPendingTransaction(): TxStatus?
 
+    fun addToReferenceBalance(value: BigInteger)
+
+    fun removeFromReferenceBalance(value: BigInteger)
+
     data class Safe(val address: Solidity.Address, val status: Status) {
         sealed class Status {
             object Ready : Status()
@@ -60,7 +66,7 @@ interface SafeRepository {
         }
     }
 
-    data class SafeBalances(val daiBalance: BigInteger, val cdaiBalance: BigInteger)
+    data class SafeBalances(val daiBalance: BigInteger, val cdaiBalance: BigInteger, val referenceBalance: BigInteger)
 
     data class SafeTx(
         val to: Solidity.Address,
@@ -144,7 +150,7 @@ class SafeRepositoryImpl(
                     listOf(address),
                     1,
                     System.currentTimeMillis(),
-                    "0x0".asEthereumAddress()!! //BuildConfig.DAI_ADDRESS.asEthereumAddress()!!
+                    BuildConfig.DAI_ADDRESS.asEthereumAddress()!!
                 )
             )
             // TODO: check response
@@ -229,7 +235,26 @@ class SafeRepositoryImpl(
                 ).result!!
             ).param0.value
         }
-        return SafeRepository.SafeBalances(daiBalance.await(), cdaiBalance.await())
+        val cdaiBalanceValue = cdaiBalance.await()
+        val referenceBalance = accountPrefs.getString(PREF_KEY_REFERENCE_BALANCE, null)?.hexAsBigIntegerOrNull() ?: run {
+            accountPrefs.edit { putString(PREF_KEY_REFERENCE_BALANCE, cdaiBalanceValue.toHexString()) }
+            cdaiBalanceValue
+        }
+        return SafeRepository.SafeBalances(daiBalance.await(), cdaiBalanceValue, referenceBalance)
+    }
+
+    override fun addToReferenceBalance(value: BigInteger) {
+        val prev = accountPrefs.getString(PREF_KEY_REFERENCE_BALANCE, null)?.hexAsBigIntegerOrNull() ?: return
+        accountPrefs.edit { putString(PREF_KEY_REFERENCE_BALANCE, (prev + value).toHexString()) }
+    }
+
+    override fun removeFromReferenceBalance(value: BigInteger) {
+        val prev = accountPrefs.getString(PREF_KEY_REFERENCE_BALANCE, null)?.hexAsBigIntegerOrNull() ?: return
+        val new = (prev - value)
+        if (new < BigInteger.ZERO)
+            accountPrefs.edit { remove(PREF_KEY_REFERENCE_BALANCE) }
+        else
+            accountPrefs.edit { putString(PREF_KEY_REFERENCE_BALANCE, (prev - value).toHexString()) }
     }
 
     override suspend fun triggerSafeDeployment() {
@@ -376,6 +401,7 @@ class SafeRepositoryImpl(
         private const val PREF_KEY_SAFE_BLOCK = "accounts.string.safe_block"
         private const val PREF_KEY_SAFE_CREATION_TX = "accounts.string.safe_creation_tx"
 
+        private const val PREF_KEY_REFERENCE_BALANCE = "accounts.string.reference_balance"
         private const val PREF_KEY_PENDING_TRANSACTION_HASH = "accounts.string.pending_transaction_hash"
 
         private const val ENC_PASSWORD = "ThisShouldNotBeHardcoded"

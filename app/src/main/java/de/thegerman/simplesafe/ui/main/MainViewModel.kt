@@ -1,7 +1,6 @@
 package de.thegerman.simplesafe.ui.main
 
 import android.util.Log
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.liveData
 import androidx.lifecycle.viewModelScope
 import de.thegerman.simplesafe.BuildConfig
@@ -10,7 +9,6 @@ import de.thegerman.simplesafe.repositories.SafeRepository
 import de.thegerman.simplesafe.ui.base.BaseViewModel
 import de.thegerman.simplesafe.MultiSend
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 import pm.gnosis.model.Solidity
 import pm.gnosis.model.SolidityBase
 import pm.gnosis.utils.asEthereumAddress
@@ -158,11 +156,13 @@ class MainViewModel(
         viewModelScope.launch(Dispatchers.IO + coroutineErrorHandler) {
             updateState { copy(submitting = true) }
             try {
+                currentState().txHash?.let { return@launch } // Transaction pending, do not perform another
                 val balance = currentState().balances?.daiBalance ?: return@launch
-                val amount = balance - ONE_DAI.div(BigInteger.valueOf(2))
+                val amount = balance - ONE_DAI.div(BigInteger.valueOf(4)).times(BigInteger.valueOf(3))
                 if (amount < BigInteger.ZERO) return@launch
                 val execInfo = safeRepository.safeTransactionExecInfo(buildInvestTx(amount))
                 val txHash = safeRepository.submitSafeTransaction(buildInvestTx(amount), execInfo)
+                safeRepository.addToReferenceBalance(amount)
                 updateState { copy(txHash = txHash) }
             } finally {
                 updateState { copy(submitting = false) }

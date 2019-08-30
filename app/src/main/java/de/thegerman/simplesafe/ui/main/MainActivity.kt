@@ -10,7 +10,6 @@ import de.thegerman.simplesafe.R
 import de.thegerman.simplesafe.repositories.SafeRepository.Safe
 import de.thegerman.simplesafe.ui.base.BaseActivity
 import de.thegerman.simplesafe.ui.withdraw.WithdrawActivity
-import de.thegerman.simplesafe.utils.asMiddleEllipsized
 import de.thegerman.simplesafe.utils.copyToClipboard
 import de.thegerman.simplesafe.utils.shiftedString
 import kotlinx.android.synthetic.main.screen_main.*
@@ -44,18 +43,21 @@ class MainActivity : BaseActivity<MainViewModelContract.State, MainViewModelCont
     override fun updateState(state: MainViewModelContract.State) {
         state.safe?.address?.apply {
             val addressString = asEthereumAddressChecksumString()
-            main_account_address.text = addressString.asMiddleEllipsized(4)
             main_account_img.setAddress(this)
-            main_account_address.setOnLongClickListener {
+            main_account_img.setOnClickListener {
                 copyToClipboard("Wallet Address", addressString)
                 Toast.makeText(this@MainActivity, "Copied address to clipboard", Toast.LENGTH_SHORT).show()
-                true
             }
         }
 
         state.balances?.let { balances ->
             main_pending_txt.text = "Pending $${balances.daiBalance.shiftedString(18, decimalsToDisplay = 2)}"
-            main_balance_txt.text = "$${balances.cdaiBalance.shiftedString(18, decimalsToDisplay = 2)}"
+            val balanceParts = balances.cdaiBalance.shiftedString(18, decimalsToDisplay = 10).split(".")
+            main_balance_txt.text = "$${balanceParts.first()}"
+            main_balance_decimals_txt.text = ".${balanceParts.getOrNull(1) ?: "00"}"
+            val interestParts = (balances.cdaiBalance - balances.referenceBalance).shiftedString(18, decimalsToDisplay = 10).split(".")
+            main_interest_txt.text = "$${interestParts.first()}"
+            main_interest_decimals_txt.text = ".${interestParts.getOrNull(1) ?: "00"}"
         }
 
         main_account_info_group.isVisible = state.safe != null

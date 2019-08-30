@@ -2,7 +2,12 @@
 <resources>
     <color name="colorPrimary">#008577</color>
     <color name="colorPrimaryDark">#00574B</color>
+    <color name="secondaryText">#5D6D74</color>
     <color name="colorAccent">#D81B60</color>
     <color name="divider">#9C9C9C</color>
     <color name="white">#fff</color>
+    <color name="transparent">#00000000</color>
+    <color name="mediumGrey">#b2b5b2</color>
+    <color name="pressedShade">#33000000</color>
+    <color name="ic_launcher_background">#008C73</color>
 </resources>

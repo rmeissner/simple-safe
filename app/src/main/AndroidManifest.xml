@@ -17,9 +17,11 @@
         tools:ignore="GoogleAppIndexingWarning">
         <activity
             android:name="de.thegerman.simplesafe.ui.main.MainActivity"
+            android:launchMode="singleTop"
             android:screenOrientation="portrait" />
         <activity
             android:name=".ui.intro.IntroActivity"
+            android:launchMode="singleTop"
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -29,6 +31,7 @@
         </activity>
         <activity
             android:name=".ui.withdraw.WithdrawActivity"
+            android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize" />
     </application>

@@ -7,9 +7,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.util.Log
 import androidx.core.view.isVisible
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.liveData
-import androidx.lifecycle.viewModelScope
 import de.thegerman.simplesafe.BuildConfig
 import de.thegerman.simplesafe.Compound
 import de.thegerman.simplesafe.MultiSend
@@ -17,7 +15,6 @@ import de.thegerman.simplesafe.R
 import de.thegerman.simplesafe.repositories.SafeRepository
 import de.thegerman.simplesafe.ui.base.BaseActivity
 import de.thegerman.simplesafe.ui.base.BaseViewModel
-import de.thegerman.simplesafe.ui.main.MainViewModel
 import de.thegerman.simplesafe.utils.shiftedString
 import kotlinx.android.synthetic.main.screen_withdraw.*
 import kotlinx.coroutines.*
@@ -26,10 +23,7 @@ import pm.gnosis.model.Solidity
 import pm.gnosis.model.SolidityBase
 import pm.gnosis.svalinn.common.utils.getColorCompat
 import pm.gnosis.utils.asEthereumAddress
-import pm.gnosis.utils.decimalAsBigIntegerOrNull
-import pm.gnosis.utils.hexAsBigInteger
 import pm.gnosis.utils.hexStringToByteArray
-import java.lang.IllegalStateException
 import java.math.BigDecimal
 import java.math.BigInteger
 
@@ -137,6 +131,7 @@ class WithdrawViewModel(
                     val fees = (execInfo.baseGas + execInfo.txGas) * execInfo.gasPrice
                     check(balance != null && fees + value <= balance) { "Cannot submit transaction" }
                     val txHash = safeRepository.submitSafeTransaction(buildWithdrawTx(value, fees, receipient), execInfo)
+                    safeRepository.removeFromReferenceBalance(value)
                     updateState { copy(txHash = txHash) }
                 }
             } finally {

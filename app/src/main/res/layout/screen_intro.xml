@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
+    android:id="@+id/intro_root"
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -7,42 +8,19 @@
     android:layout_height="match_parent"
     tools:context=".ui.main.MainActivity">
 
-    <Button
-        android:id="@+id/intro_new_account_btn"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_margin="8dp"
-        android:backgroundTint="@color/colorPrimary"
-        android:text="Generate new account"
-        android:textColor="@color/white"
+    <androidx.viewpager.widget.ViewPager
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@+id/intro_recover_btn"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:visibility="visible" />
-
-    <ProgressBar
-        android:id="@+id/intro_progress"
-        android:layout_width="64dp"
-        android:layout_height="64dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        android:id="@+id/intro_view_pager"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/intro_pager_indicator"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <TextView
-        android:id="@+id/intro_recover_btn"
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:layout_margin="8dp"
-        android:backgroundTint="@color/colorAccent"
-        android:gravity="center"
-        android:text="Login with Google"
-        android:textColor="@color/colorAccent"
+    <de.thegerman.simplesafe.views.CirclePageIndicator
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:visibility="visible" />
+        android:id="@+id/intro_pager_indicator"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
