@@ -7,15 +7,87 @@
     android:layout_height="match_parent"
     tools:context=".ui.main.MainActivity">
 
-    <Button
-        android:id="@+id/withdraw_submit_btn"
+    <View
+        android:id="@+id/withdraw_header_bg"
         android:layout_width="match_parent"
+        android:layout_height="@dimen/header_height"
+        android:background="@color/secondaryHeader"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <ImageView
+        android:id="@+id/withdraw_back_btn"
+        android:layout_width="56dp"
         android:layout_height="56dp"
-        android:backgroundTint="@color/colorAccent"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/selectable_background"
+        android:padding="16dp"
+        android:tint="@color/colorPrimary"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_arrow_back_24dp" />
+
+    <TextView
+        android:id="@+id/withdraw_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="40dp"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
         android:text="Withdraw"
+        android:textColor="@color/colorPrimary"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        app:layout_constraintBottom_toTopOf="@id/withdraw_sub_title"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_chainStyle="packed" />
+
+    <TextView
+        android:id="@+id/withdraw_sub_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:text="DAI"
+        android:textColor="@color/secondaryText"
+        android:textSize="28sp"
+        app:layout_constraintBottom_toBottomOf="@id/withdraw_header_bg"
+        app:layout_constraintTop_toBottomOf="@id/withdraw_title"
+        app:layout_constraintVertical_chainStyle="packed" />
+
+    <TextView
+        android:id="@+id/withdraw_hint_txt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="24dp"
+        android:text="Select how much DAI you would like to withdraw and the destination address."
+        android:textColor="@color/darkText"
+        android:textSize="16sp"
+        app:layout_constraintTop_toBottomOf="@id/withdraw_header_bg" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/divider"
+        app:layout_constraintTop_toBottomOf="@id/withdraw_hint_txt" />
+
+    <TextView
+        android:id="@+id/withdraw_submit_btn"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="64dp"
+        android:text="Withdraw"
+        android:layout_marginEnd="16dp"
+        android:background="@drawable/primary_button"
+        android:gravity="center"
+        android:paddingStart="64dp"
+        android:paddingEnd="64dp"
+        android:textSize="18sp"
         android:textColor="@color/white"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:textStyle="bold"
+        app:layout_constraintTop_toTopOf="@id/withdraw_value_divider"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         tools:visibility="visible" />
@@ -40,12 +112,12 @@
         android:layout_height="56dp"
         android:layout_marginTop="24dp"
         android:background="@null"
-        android:hint="Enter receipient"
+        android:hint="Enter recipient"
         android:paddingStart="24dp"
         android:paddingEnd="24dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/withdraw_title_txt" />
+        app:layout_constraintTop_toBottomOf="@id/withdraw_hint_txt" />
 
     <TextView
         android:id="@+id/withdraw_balance_txt"
@@ -72,19 +144,6 @@
         app:layout_constraintBottom_toTopOf="@id/withdraw_submit_btn"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
-
-    <TextView
-        android:id="@+id/withdraw_title_txt"
-        android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:gravity="center_vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:text="Withdraw funds"
-        android:textSize="18sp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
     <View
         android:id="@+id/withdraw_address_divider"

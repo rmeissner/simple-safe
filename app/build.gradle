@@ -128,6 +128,7 @@ dependencies {
     implementation "com.github.komputing:KHex:0.6"
 
     implementation 'com.google.android.gms:play-services-auth:17.0.0'
+    implementation "com.google.zxing:core:$versions.zxing"
 
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test:runner:1.2.0'

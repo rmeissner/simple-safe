@@ -185,6 +185,8 @@ class WithdrawActivity : BaseActivity<WithdrawViewModelContract.State, WithdrawV
         super.onCreate(savedInstanceState)
         setContentView(R.layout.screen_withdraw)
 
+        withdraw_back_btn.setOnClickListener { onBackPressed() }
+
         withdraw_address_input.addTextChangedListener(object : TextWatcher {
             override fun afterTextChanged(p0: Editable?) {}
 

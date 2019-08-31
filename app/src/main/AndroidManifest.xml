@@ -5,6 +5,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="de.thegerman.simplesafe">
 
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name="de.thegerman.simplesafe.TraderApplication"
         android:allowBackup="true"
@@ -34,9 +36,11 @@
             android:launchMode="singleTop"
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".ui.deposit.DepositActivity"
+            android:launchMode="singleTop"
+            android:screenOrientation="portrait" />
     </application>
-
-    <uses-permission android:name="android.permission.INTERNET" />
 
     <dist:module dist:instant="true" />
 

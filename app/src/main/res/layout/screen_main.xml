@@ -11,7 +11,7 @@
         android:id="@+id/main_header"
         app:layout_constraintTop_toTopOf="parent"
         android:layout_width="match_parent"
-        android:layout_height="160dp"
+        android:layout_height="@dimen/header_height"
         android:background="@color/colorPrimary" />
 
     <TextView
@@ -24,7 +24,7 @@
         android:paddingStart="24dp"
         android:paddingEnd="24dp"
         android:text="Your savings"
-        android:textSize="24sp"
+        android:textSize="32sp"
         android:textColor="@color/white"
         app:layout_constraintTop_toTopOf="@id/main_header"
         app:layout_constraintBottom_toBottomOf="@id/main_header"
@@ -137,28 +137,64 @@
         app:layout_constraintBaseline_toBaselineOf="@+id/main_interest_txt"
         tools:text=".50058" />
 
-    <TextView
-        android:id="@+id/main_withdraw_btn"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <ImageView
+        android:id="@+id/main_withdraw_img"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
         android:layout_marginTop="32dp"
-        android:paddingStart="24dp"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp"
-        android:paddingEnd="24dp"
-        android:background="@drawable/primary_button"
-        android:text="Withdraw"
-        android:textColor="@color/white"
-        app:layout_constraintEnd_toEndOf="parent"
+        android:background="@drawable/secondary_circle_selectable"
+        android:padding="16dp"
+        android:src="@drawable/withdraw_wallet"
+        android:tint="@color/white"
+        app:layout_constraintEnd_toStartOf="@id/main_deposit_img"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/main_interest_txt" />
+
+    <TextView
+        android:id="@+id/main_withdraw_txt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/selectable_background"
+        android:text="Withdraw"
+        android:textColor="@color/secondaryText"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="@+id/main_withdraw_img"
+        app:layout_constraintStart_toStartOf="@+id/main_withdraw_img"
+        app:layout_constraintTop_toBottomOf="@+id/main_withdraw_img" />
+
+    <ImageView
+        android:id="@+id/main_deposit_img"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:layout_marginTop="32dp"
+        android:background="@drawable/primary_circle_selectable"
+        android:padding="16dp"
+        android:src="@drawable/topup_wallet"
+        android:textColor="@color/white"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/main_withdraw_img"
+        app:layout_constraintTop_toBottomOf="@id/main_interest_txt" />
+
+    <TextView
+        android:id="@+id/main_deposit_txt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/selectable_background"
+        android:text="Top up"
+        android:textColor="@color/colorPrimary"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="@+id/main_deposit_img"
+        app:layout_constraintStart_toStartOf="@+id/main_deposit_img"
+        app:layout_constraintTop_toBottomOf="@+id/main_deposit_img" />
 
     <androidx.constraintlayout.widget.Group
         android:id="@+id/main_balances_group"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:visibility="gone"
-        app:constraint_referenced_ids="main_balance_lbl,main_balance_txt,main_pending_txt,main_withdraw_btn,main_interest_lbl,main_interest_decimals_txt,main_interest_txt"
+        app:constraint_referenced_ids="main_balance_lbl,main_balance_txt,main_pending_txt,main_withdraw_img,main_withdraw_txt,main_deposit_img,main_deposit_txt,main_interest_lbl,main_interest_decimals_txt,main_interest_txt"
         tools:visibility="visible" />
 
     <Button

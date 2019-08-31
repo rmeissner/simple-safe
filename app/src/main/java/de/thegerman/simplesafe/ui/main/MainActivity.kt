@@ -3,12 +3,14 @@ package de.thegerman.simplesafe.ui.main
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.core.view.isVisible
 import de.thegerman.simplesafe.BuildConfig
 import de.thegerman.simplesafe.R
 import de.thegerman.simplesafe.repositories.SafeRepository.Safe
 import de.thegerman.simplesafe.ui.base.BaseActivity
+import de.thegerman.simplesafe.ui.deposit.DepositActivity
 import de.thegerman.simplesafe.ui.withdraw.WithdrawActivity
 import de.thegerman.simplesafe.utils.copyToClipboard
 import de.thegerman.simplesafe.utils.shiftedString
@@ -23,6 +25,9 @@ class MainActivity : BaseActivity<MainViewModelContract.State, MainViewModelCont
 
     override val viewModel: MainViewModelContract by viewModel()
 
+    private val withdrawClickListener = View.OnClickListener { startActivity(WithdrawActivity.createIntent(this@MainActivity)) }
+    private val depositClickListener = View.OnClickListener { startActivity(DepositActivity.createIntent(this@MainActivity)) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.screen_main)
@@ -30,9 +35,11 @@ class MainActivity : BaseActivity<MainViewModelContract.State, MainViewModelCont
         main_retry_btn.setOnClickListener {
             viewModel.loadSafe()
         }
-        main_withdraw_btn.setOnClickListener {
-            startActivity(WithdrawActivity.createIntent(this))
-        }
+        main_withdraw_img.setOnClickListener(withdrawClickListener)
+        main_withdraw_txt.setOnClickListener(withdrawClickListener)
+        main_deposit_img.setOnClickListener(depositClickListener)
+        main_deposit_txt.setOnClickListener(depositClickListener)
+        main_account_img.setOnClickListener(depositClickListener)
     }
 
     override fun onResume() {
@@ -42,12 +49,7 @@ class MainActivity : BaseActivity<MainViewModelContract.State, MainViewModelCont
 
     override fun updateState(state: MainViewModelContract.State) {
         state.safe?.address?.apply {
-            val addressString = asEthereumAddressChecksumString()
             main_account_img.setAddress(this)
-            main_account_img.setOnClickListener {
-                copyToClipboard("Wallet Address", addressString)
-                Toast.makeText(this@MainActivity, "Copied address to clipboard", Toast.LENGTH_SHORT).show()
-            }
         }
 
         state.balances?.let { balances ->

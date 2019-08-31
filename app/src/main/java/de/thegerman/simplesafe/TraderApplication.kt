@@ -8,6 +8,8 @@ import de.thegerman.simplesafe.data.RelayServiceApi
 import de.thegerman.simplesafe.data.adapter.*
 import de.thegerman.simplesafe.repositories.SafeRepository
 import de.thegerman.simplesafe.repositories.SafeRepositoryImpl
+import de.thegerman.simplesafe.ui.deposit.DepositViewModel
+import de.thegerman.simplesafe.ui.deposit.DepositViewModelContract
 import de.thegerman.simplesafe.ui.intro.IntroViewModel
 import de.thegerman.simplesafe.ui.intro.IntroViewModelContract
 import de.thegerman.simplesafe.ui.main.MainViewModel
@@ -82,6 +84,7 @@ class TraderApplication : Application() {
         viewModel<MainViewModelContract> { MainViewModel(get()) }
         viewModel<IntroViewModelContract> { IntroViewModel(get(), get()) }
         viewModel<WithdrawViewModelContract> { WithdrawViewModel(get()) }
+        viewModel<DepositViewModelContract> { DepositViewModel(get(), get()) }
     }
 
     private val apiModule = module {

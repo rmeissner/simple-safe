@@ -69,12 +69,11 @@ class IntroActivity : BaseActivity<IntroViewModelContract.State, IntroViewModelC
 
     override fun updateState(state: IntroViewModelContract.State) {
         viewPager.state = state
+        intro_view_pager.isVisible = !state.setup
+        intro_pager_indicator.isVisible = !state.setup
         if (state.setup) {
             startActivity(MainActivity.createIntent(this))
             finish()
-        } else {
-            intro_view_pager.isVisible = true
-            intro_pager_indicator.isVisible = true
         }
         when (val error = state.recoverError?.error) {
             is ResolvableApiException -> {
