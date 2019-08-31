@@ -92,6 +92,8 @@ class CirclePageIndicator @JvmOverloads constructor(
         val xOffset = paddingLeft + (width - paddingLeft - paddingRight) / 2f - (count - 1) * (radius + (spacing / 2f))
 
         (0 until count).forEach {
+            if (currentPosition == it) return@forEach
+            if (currentPositionOffset > 0 && currentPosition + 1 == it) return@forEach
             canvas.drawCircle(xOffset + it * itemSpace, yOffset, radius, inactivePaint)
         }
 

@@ -17,7 +17,9 @@ import de.thegerman.simplesafe.ui.base.BaseActivity
 import de.thegerman.simplesafe.ui.base.BaseViewModel
 import de.thegerman.simplesafe.utils.shiftedString
 import kotlinx.android.synthetic.main.screen_withdraw.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import org.koin.android.viewmodel.ext.android.viewModel
 import pm.gnosis.model.Solidity
 import pm.gnosis.model.SolidityBase
@@ -131,11 +133,11 @@ class WithdrawViewModel(
                     val fees = (execInfo.baseGas + execInfo.txGas) * execInfo.gasPrice
                     check(balance != null && fees + value <= balance) { "Cannot submit transaction" }
                     val txHash = safeRepository.submitSafeTransaction(buildWithdrawTx(value, fees, receipient), execInfo)
-                    safeRepository.removeFromReferenceBalance(value)
+                    safeRepository.removeFromReferenceBalance(fees + value)
                     updateState { copy(txHash = txHash) }
                 }
             } finally {
-                updateState { copy(submitting = true) }
+                updateState { copy(submitting = false) }
             }
         }
     }
