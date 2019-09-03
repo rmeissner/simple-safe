@@ -1,0 +1,196 @@
+{
+  "contractName": "TopUpModule",
+  "abi": [
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "manager",
+      "outputs": [
+        {
+          "internalType": "contract ModuleManager",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_masterCopy",
+          "type": "address"
+        }
+      ],
+      "name": "changeMasterCopy",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "sourceToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "mintToken",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "minTransferAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxTriggerReward",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "noTransferAmount",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct TopUpModule.TopUpRule[]",
+          "name": "_rules",
+          "type": "tuple[]"
+        }
+      ],
+      "name": "setup",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "listRules",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "sourceToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "mintToken",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "minTransferAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxTriggerReward",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "noTransferAmount",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct TopUpModule.TopUpRule[]",
+          "name": "_rules",
+          "type": "tuple[]"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "address",
+              "name": "sourceToken",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "mintToken",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "minTransferAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "maxTriggerReward",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "noTransferAmount",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct TopUpModule.TopUpRule",
+          "name": "_rule",
+          "type": "tuple"
+        }
+      ],
+      "name": "addRule",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_index",
+          "type": "uint256"
+        }
+      ],
+      "name": "removeRule",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "_index",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_requestedReward",
+          "type": "uint256"
+        }
+      ],
+      "name": "executeTopUp",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
+}

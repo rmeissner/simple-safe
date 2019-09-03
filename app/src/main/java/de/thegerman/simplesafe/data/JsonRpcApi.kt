@@ -16,6 +16,9 @@ interface JsonRpcApi {
     @POST(".")
     suspend fun post(@Body jsonRpcRequest: JsonRpcRequest): JsonRpcResult
 
+    @POST(".")
+    suspend fun post(@Body jsonRpcRequests: List<JsonRpcRequest>): List<JsonRpcResult>
+
     @JsonClass(generateAdapter = true)
     data class JsonRpcRequest(
         @Json(name = "jsonrpc") val jsonRpc: String = "2.0",

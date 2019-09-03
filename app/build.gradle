@@ -15,9 +15,14 @@ android {
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
+        buildConfigField javaTypes.STRING, "PAYMENT_TOKEN_ADDRESS", javaTypes.NULL
         buildConfigField javaTypes.STRING, "DAI_ADDRESS", asString(getKey("DAI_ADDRESS", "0x5592ec0cfb4dbc12d3ab100b257153436a1f0fea"))
         buildConfigField javaTypes.STRING, "CDAI_ADDRESS", asString(getKey("CDAI_ADDRESS", "0x6d7f0754ffeb405d23c51ce938289d4835be3b14"))
         buildConfigField javaTypes.STRING, "MULTI_SEND_ADDRESS", asString(getKey("MULTI_SEND_ADDRESS", "0xe74d6af1670fb6560dd61ee29eb57c7bc027ce4e"))
+        buildConfigField javaTypes.STRING, "PROXY_FACTORY_ADDRESS", asString(getKey("PROXY_FACTORY_ADDRESS", "0x12302fE9c02ff50939BaAaaf415fc226C078613C"))
+        buildConfigField javaTypes.STRING, "MULTI_SEND_ADDRESS", asString(getKey("MULTI_SEND_ADDRESS", "0xe74d6af1670fb6560dd61ee29eb57c7bc027ce4e"))
+        buildConfigField javaTypes.STRING, "CREATE_AND_ADD_MODULES_ADDRESS", asString(getKey("CREATE_AND_ADD_MODULES_ADDRESS", "0x1a56aE690ab0818aF5cA349b7D21f1d7e76a3d36"))
+        buildConfigField javaTypes.STRING, "TOP_UP_MODULE_ADDRESS", asString(getKey("TOP_UP_MODULE_ADDRESS", "0x53999AbfDC3da7eeF573f559440B934258928C41"))
 
         buildConfigField javaTypes.STRING, "BLOCK_EXPLORER_TX", asString(getKey("BLOCK_EXPLORER_TX", "https://rinkeby.etherscan.io/tx/%s"))
         buildConfigField javaTypes.STRING, "INFURA_API_KEY", asString(getKey("INFURA_API_KEY", ""))
@@ -46,6 +51,7 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
             minifyEnabled false
+            buildConfigField javaTypes.STRING, "PAYMENT_TOKEN_ADDRESS", asString(getKey("PAYMENT_TOKEN_ADDRESS", "0x0000000000000000000000000000000000000000"))
         }
 
         nyan {

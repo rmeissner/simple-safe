@@ -4,20 +4,18 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.core.view.isVisible
 import de.thegerman.simplesafe.BuildConfig
 import de.thegerman.simplesafe.R
 import de.thegerman.simplesafe.repositories.SafeRepository.Safe
+import de.thegerman.simplesafe.ui.account.AccountActivity
 import de.thegerman.simplesafe.ui.base.BaseActivity
 import de.thegerman.simplesafe.ui.deposit.DepositActivity
 import de.thegerman.simplesafe.ui.withdraw.WithdrawActivity
-import de.thegerman.simplesafe.utils.copyToClipboard
 import de.thegerman.simplesafe.utils.shiftedString
 import kotlinx.android.synthetic.main.screen_main.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.koin.android.viewmodel.ext.android.viewModel
-import pm.gnosis.crypto.utils.asEthereumAddressChecksumString
 import pm.gnosis.svalinn.common.utils.openUrl
 
 @ExperimentalCoroutinesApi
@@ -39,7 +37,7 @@ class MainActivity : BaseActivity<MainViewModelContract.State, MainViewModelCont
         main_withdraw_txt.setOnClickListener(withdrawClickListener)
         main_deposit_img.setOnClickListener(depositClickListener)
         main_deposit_txt.setOnClickListener(depositClickListener)
-        main_account_img.setOnClickListener(depositClickListener)
+        main_account_img.setOnClickListener { startActivity(AccountActivity.createIntent(this)) }
     }
 
     override fun onResume() {

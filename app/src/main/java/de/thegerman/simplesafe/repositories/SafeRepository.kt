@@ -53,6 +53,10 @@ interface SafeRepository {
 
     suspend fun checkPendingTransaction(): TxStatus?
 
+    suspend fun loadModules(): List<SafeModule>
+
+    fun getPendingTransactionHash(): String?
+
     fun addToReferenceBalance(value: BigInteger)
 
     fun removeFromReferenceBalance(value: BigInteger)
@@ -65,6 +69,8 @@ interface SafeRepository {
             data class Deploying(val transactionHash: String) : Status()
         }
     }
+
+    data class SafeModule(val address: Solidity.Address, val masterCopy: Solidity.Address)
 
     data class SafeBalances(val daiBalance: BigInteger, val cdaiBalance: BigInteger, val referenceBalance: BigInteger)
 
@@ -150,7 +156,7 @@ class SafeRepositoryImpl(
                     listOf(address),
                     1,
                     System.currentTimeMillis(),
-                    BuildConfig.DAI_ADDRESS.asEthereumAddress()!!
+                    BuildConfig.PAYMENT_TOKEN_ADDRESS?.asEthereumAddress() ?: BuildConfig.DAI_ADDRESS.asEthereumAddress()!!
                 )
             )
             // TODO: check response
@@ -190,8 +196,11 @@ class SafeRepositoryImpl(
         }
     }
 
+    override fun getPendingTransactionHash(): String? =
+        accountPrefs.getString(PREF_KEY_PENDING_TRANSACTION_HASH, null)
+
     override suspend fun checkPendingTransaction(): SafeRepository.TxStatus? {
-        val txHash = accountPrefs.getString(PREF_KEY_PENDING_TRANSACTION_HASH, null) ?: return null
+        val txHash = getPendingTransactionHash() ?: return null
         val response = jsonRpcApi.receipt(JsonRpcApi.JsonRpcRequest(method = "eth_getTransactionReceipt", params = listOf(txHash)))
         response.error?.let { throw RuntimeException(response.error.message) }
         val receipt = response.result ?: return SafeRepository.TxStatus.Pending(txHash)
@@ -241,6 +250,37 @@ class SafeRepositoryImpl(
             cdaiBalanceValue
         }
         return SafeRepository.SafeBalances(daiBalance.await(), cdaiBalanceValue, referenceBalance)
+    }
+
+    override suspend fun loadModules(): List<SafeRepository.SafeModule> {
+        val safeAddress = getSafeAddress()
+        val modules = GnosisSafe.GetModules.decode(
+            jsonRpcApi.post(
+                JsonRpcApi.JsonRpcRequest(
+                    method = "eth_call",
+                    params = listOf(
+                        mapOf(
+                            "to" to safeAddress,
+                            "data" to GnosisSafe.GetModules.encode()
+                        ), "latest"
+                    )
+                )
+            ).result!!
+        ).param0.items
+
+        val masterCopies = jsonRpcApi.post(modules.mapIndexed { index, address ->
+            JsonRpcApi.JsonRpcRequest(
+                id = index,
+                method = "eth_getStorageAt",
+                params = listOf(address.asEthereumAddressString(), BigInteger.ZERO.toHexString(), "latest")
+            )
+        })
+
+        return masterCopies.mapNotNull {
+            val module = modules.getOrNull(it.id) ?: return@mapNotNull null
+            val masterCopy = it.result?.asEthereumAddress() ?: return@mapNotNull null
+            SafeRepository.SafeModule(module, masterCopy)
+        }
     }
 
     override fun addToReferenceBalance(value: BigInteger) {

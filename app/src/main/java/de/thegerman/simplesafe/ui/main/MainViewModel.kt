@@ -93,7 +93,7 @@ class MainViewModel(
                         if (status.paymentAmount <= balances.daiBalance) safeRepository.triggerSafeDeployment()
                     }
                     is SafeRepository.Safe.Status.Ready -> {
-                        if (balances.daiBalance >= ONE_DAI) investAll()
+                        //if (balances.daiBalance >= ONE_DAI) investAll()
                     }
                 }
             } catch (e: Exception) {
