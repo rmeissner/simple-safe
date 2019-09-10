@@ -25,7 +25,7 @@ import de.thegerman.simplesafe.ui.main.MainActivity
 import kotlinx.android.synthetic.main.screen_intro.*
 import kotlinx.android.synthetic.main.screen_intro_slider_create.view.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import org.koin.android.viewmodel.ext.android.viewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import pm.gnosis.svalinn.common.utils.getColorCompat
 import java.lang.Exception
 

@@ -120,11 +120,11 @@ dependencies {
     // Koin for Android
     implementation "org.koin:koin-android:$versions.koin"
     // Koin Android Scope features
-    implementation "org.koin:koin-android-scope:$versions.koin"
+    implementation "org.koin:koin-androidx-scope:$versions.koin"
     // Koin Android ViewModel features
-    implementation "org.koin:koin-android-viewmodel:$versions.koin"
+    implementation "org.koin:koin-androidx-viewmodel:$versions.koin"
     // Koin Android Experimental features
-    implementation "org.koin:koin-android-ext:$versions.koin"
+    implementation "org.koin:koin-androidx-ext:$versions.koin"
 
     implementation "com.squareup.moshi:moshi:$versions.moshi"
     kapt "com.squareup.moshi:moshi-kotlin-codegen:$versions.moshi"

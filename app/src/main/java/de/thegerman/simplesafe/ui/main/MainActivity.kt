@@ -15,7 +15,7 @@ import de.thegerman.simplesafe.ui.withdraw.WithdrawActivity
 import de.thegerman.simplesafe.utils.shiftedString
 import kotlinx.android.synthetic.main.screen_main.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import org.koin.android.viewmodel.ext.android.viewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import pm.gnosis.svalinn.common.utils.openUrl
 
 @ExperimentalCoroutinesApi

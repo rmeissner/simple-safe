@@ -12,7 +12,7 @@ import de.thegerman.simplesafe.ui.base.BaseActivity
 import de.thegerman.simplesafe.ui.base.BaseViewModel
 import kotlinx.android.synthetic.main.screen_auto_top_up.*
 import kotlinx.coroutines.*
-import org.koin.android.viewmodel.ext.android.viewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import pm.gnosis.model.Solidity
 import pm.gnosis.model.SolidityBase
 import pm.gnosis.utils.asEthereumAddress

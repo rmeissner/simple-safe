@@ -20,7 +20,7 @@ import de.thegerman.simplesafe.utils.generateQrCode
 import kotlinx.android.synthetic.main.screen_account.*
 import kotlinx.android.synthetic.main.screen_deposit.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import org.koin.android.viewmodel.ext.android.viewModel
+import org.koin.androidx.viewmodel.ext.android.viewModel
 import pm.gnosis.crypto.utils.asEthereumAddressChecksumString
 import pm.gnosis.model.Solidity
 
