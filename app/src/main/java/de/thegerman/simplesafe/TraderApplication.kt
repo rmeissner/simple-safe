@@ -5,15 +5,22 @@ import com.squareup.moshi.Moshi
 import com.squareup.picasso.Picasso
 import de.thegerman.simplesafe.data.JsonRpcApi
 import de.thegerman.simplesafe.data.RelayServiceApi
+import de.thegerman.simplesafe.data.TransactionServiceApi
 import de.thegerman.simplesafe.data.adapter.*
 import de.thegerman.simplesafe.repositories.SafeRepository
 import de.thegerman.simplesafe.repositories.SafeRepositoryImpl
+import de.thegerman.simplesafe.transactions.pending.PendingTxContract
+import de.thegerman.simplesafe.transactions.pending.PendingTxViewModel
 import de.thegerman.simplesafe.ui.auto_top_up.AutoTopUpViewModel
 import de.thegerman.simplesafe.ui.auto_top_up.AutoTopUpViewModelContract
 import de.thegerman.simplesafe.ui.deposit.DepositViewModel
 import de.thegerman.simplesafe.ui.deposit.DepositViewModelContract
 import de.thegerman.simplesafe.ui.intro.IntroViewModel
 import de.thegerman.simplesafe.ui.intro.IntroViewModelContract
+import de.thegerman.simplesafe.ui.invite.InviteContract
+import de.thegerman.simplesafe.ui.invite.InviteViewModel
+import de.thegerman.simplesafe.ui.join.JoinContract
+import de.thegerman.simplesafe.ui.join.JoinViewModel
 import de.thegerman.simplesafe.ui.main.MainViewModel
 import de.thegerman.simplesafe.ui.main.MainViewModelContract
 import de.thegerman.simplesafe.ui.withdraw.WithdrawViewModel
@@ -21,7 +28,7 @@ import de.thegerman.simplesafe.ui.withdraw.WithdrawViewModelContract
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
-import org.koin.android.viewmodel.dsl.viewModel
+import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
 import pm.gnosis.mnemonic.Bip39
@@ -78,7 +85,7 @@ class TraderApplication : Application() {
     }
 
     private val repositoryModule = module {
-        single<SafeRepository> { SafeRepositoryImpl(get(), get(), get(), get(), get()) }
+        single<SafeRepository> { SafeRepositoryImpl(get(), get(), get(), get(), get(), get()) }
     }
 
     @ExperimentalCoroutinesApi
@@ -88,9 +95,21 @@ class TraderApplication : Application() {
         viewModel<WithdrawViewModelContract> { WithdrawViewModel(get()) }
         viewModel<DepositViewModelContract> { DepositViewModel(get(), get()) }
         viewModel<AutoTopUpViewModelContract> { AutoTopUpViewModel(get()) }
+        viewModel<InviteContract> { InviteViewModel(get()) }
+        viewModel<JoinContract> { JoinViewModel() }
+        viewModel<PendingTxContract> { PendingTxViewModel(get()) }
     }
 
     private val apiModule = module {
+        single<TransactionServiceApi> {
+            Retrofit.Builder()
+                .client(get())
+                .baseUrl(TransactionServiceApi.BASE_URL)
+                .addConverterFactory(MoshiConverterFactory.create(get()))
+                .build()
+                .create(TransactionServiceApi::class.java)
+        }
+
         single<RelayServiceApi> {
             Retrofit.Builder()
                 .client(get())

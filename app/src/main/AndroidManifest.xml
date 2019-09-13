@@ -45,6 +45,9 @@
             android:name=".ui.account.AccountActivity"
             android:launchMode="singleTop"
             android:screenOrientation="portrait" />
+        <activity android:name=".ui.join.JoinActivity" />
+        <activity android:name=".ui.invite.InviteActivity" />
+        <activity android:name=".transactions.pending.PendingTxActivity" />
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />

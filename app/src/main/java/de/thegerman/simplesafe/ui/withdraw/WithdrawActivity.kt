@@ -130,10 +130,9 @@ class WithdrawViewModel(
                     val execInfo = safeRepository.safeTransactionExecInfo(tx).let {
                         it.copy(baseGas = it.baseGas + BigInteger.valueOf(1000))
                     }
-                    val fees = (execInfo.baseGas + execInfo.txGas) * execInfo.gasPrice
-                    check(balance != null && fees + value <= balance) { "Cannot submit transaction" }
-                    val txHash = safeRepository.submitSafeTransaction(buildWithdrawTx(value, fees, receipient), execInfo)
-                    safeRepository.removeFromReferenceBalance(fees + value)
+                    check(balance != null && execInfo.fees + value <= balance) { "Cannot submit transaction" }
+                    val txHash = safeRepository.submitSafeTransaction(buildWithdrawTx(value, execInfo.fees, receipient), execInfo)
+                    safeRepository.removeFromReferenceBalance(execInfo.fees + value)
                     updateState { copy(txHash = txHash) }
                 }
             } finally {

@@ -11,9 +11,11 @@ import androidx.lifecycle.liveData
 import com.google.zxing.EncodeHintType
 import de.thegerman.simplesafe.R
 import de.thegerman.simplesafe.repositories.SafeRepository
+import de.thegerman.simplesafe.transactions.pending.PendingTxActivity
 import de.thegerman.simplesafe.ui.auto_top_up.AutoTopUpActivity
 import de.thegerman.simplesafe.ui.base.BaseActivity
 import de.thegerman.simplesafe.ui.base.BaseViewModel
+import de.thegerman.simplesafe.ui.invite.InviteActivity
 import de.thegerman.simplesafe.utils.asMiddleEllipsized
 import de.thegerman.simplesafe.utils.copyToClipboard
 import de.thegerman.simplesafe.utils.generateQrCode
@@ -34,6 +36,8 @@ class AccountActivity : AppCompatActivity() {
 
         account_back_btn.setOnClickListener { onBackPressed() }
         account_settings_txt.setOnClickListener { startActivity(AutoTopUpActivity.createIntent(this)) }
+        account_add_device_txt.setOnClickListener { startActivity(InviteActivity.createIntent(this)) }
+        account_pending_txs_txt.setOnClickListener { startActivity(PendingTxActivity.createIntent(this)) }
     }
 
     companion object {

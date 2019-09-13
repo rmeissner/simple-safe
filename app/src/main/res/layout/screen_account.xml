@@ -66,10 +66,44 @@
         app:layout_constraintTop_toBottomOf="@id/account_header_bg" />
 
     <View
+        android:id="@+id/account_settings_divider"
         android:layout_width="200dp"
         android:layout_height="1dp"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         android:background="@color/divider"
         app:layout_constraintTop_toBottomOf="@id/account_settings_txt" />
+
+    <TextView
+        android:id="@+id/account_add_device_txt"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:gravity="center"
+        android:background="@drawable/selectable_background"
+        android:text="Add device"
+        android:textColor="@color/darkText"
+        android:textSize="24sp"
+        app:layout_constraintTop_toBottomOf="@id/account_settings_divider" />
+
+    <View
+        android:id="@+id/account_add_device_divider"
+        android:layout_width="200dp"
+        android:layout_height="1dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:background="@color/divider"
+        app:layout_constraintTop_toBottomOf="@id/account_add_device_txt" />
+
+    <TextView
+        android:id="@+id/account_pending_txs_txt"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:gravity="center"
+        android:background="@drawable/selectable_background"
+        android:text="Pending actions"
+        android:textColor="@color/darkText"
+        android:textSize="24sp"
+        app:layout_constraintTop_toBottomOf="@id/account_add_device_divider" />
+
+
 </androidx.constraintlayout.widget.ConstraintLayout>

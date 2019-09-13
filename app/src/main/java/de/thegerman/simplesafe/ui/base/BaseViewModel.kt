@@ -26,17 +26,17 @@ abstract class BaseViewModel<T : BaseViewModel.State> : ViewModel() {
 
     protected val coroutineErrorHandler = CoroutineExceptionHandler { _, e ->
         e.printStackTrace()
-        viewModelScope.launch { updateState { viewAction = ViewAction.ShowToast(e.message ?: "An error occurred"); this } }
+        viewModelScope.launch { updateState(true) { viewAction = ViewAction.ShowToast(e.message ?: "An error occurred"); this } }
     }
 
     protected fun currentState(): T = stateChannel.value
 
-    protected suspend fun updateState(update: T.() -> T) {
+    protected suspend fun updateState(forceViewAction: Boolean = false, update: T.() -> T) {
         try {
             val currentState = currentState()
             val nextState = currentState.run(update)
             // Reset view action if the same
-            if (nextState.viewAction === currentState.viewAction) nextState.viewAction = null
+            if (!forceViewAction && nextState.viewAction === currentState.viewAction) nextState.viewAction = null
             stateChannel.send(nextState)
         } catch (e: Exception) {
             // Could not submit update

@@ -7,6 +7,7 @@ import de.thegerman.simplesafe.GnosisSafe
 import de.thegerman.simplesafe.R
 import de.thegerman.simplesafe.data.JsonRpcApi
 import de.thegerman.simplesafe.data.RelayServiceApi
+import de.thegerman.simplesafe.data.TransactionServiceApi
 import de.thegerman.simplesafe.data.models.EstimateParams
 import de.thegerman.simplesafe.data.models.ExecuteParams
 import de.thegerman.simplesafe.data.models.RelaySafeCreationParams
@@ -25,6 +26,7 @@ import pm.gnosis.model.Solidity
 import pm.gnosis.svalinn.common.utils.edit
 import pm.gnosis.svalinn.security.EncryptionManager
 import pm.gnosis.utils.*
+import java.lang.IllegalArgumentException
 import java.math.BigInteger
 import java.nio.charset.Charset
 
@@ -55,6 +57,10 @@ interface SafeRepository {
 
     suspend fun loadModules(): List<SafeModule>
 
+    suspend fun loadSafeInfo(): SafeInfo
+
+    suspend fun loadPendingTransactions(): List<PendingSafeTx>
+
     fun getPendingTransactionHash(): String?
 
     fun addToReferenceBalance(value: BigInteger)
@@ -70,9 +76,23 @@ interface SafeRepository {
         }
     }
 
+    data class SafeInfo(
+        val address: Solidity.Address,
+        val masterCopy: Solidity.Address,
+        val owners: List<Solidity.Address>,
+        val threshold: BigInteger
+    )
+
     data class SafeModule(val address: Solidity.Address, val masterCopy: Solidity.Address)
 
     data class SafeBalances(val daiBalance: BigInteger, val cdaiBalance: BigInteger, val referenceBalance: BigInteger)
+
+    data class PendingSafeTx(
+        val hash: String,
+        val tx: SafeTx,
+        val execInfo: SafeTxExecInfo,
+        val confirmations: List<Solidity.Address>
+    )
 
     data class SafeTx(
         val to: Solidity.Address,
@@ -92,8 +112,11 @@ interface SafeRepository {
         val txGas: BigInteger,
         val gasPrice: BigInteger,
         val gasToken: Solidity.Address,
+        val refundReceiver: Solidity.Address,
         val nonce: BigInteger
-    )
+    ) {
+        val fees by lazy { (baseGas + txGas) * gasPrice }
+    }
 
     sealed class TxStatus {
         abstract val hash: String
@@ -109,7 +132,8 @@ class SafeRepositoryImpl(
     private val bip39: Bip39,
     private val encryptionManager: EncryptionManager,
     private val jsonRpcApi: JsonRpcApi,
-    private val relayServiceApi: RelayServiceApi
+    private val relayServiceApi: RelayServiceApi,
+    private val transactionServiceApi: TransactionServiceApi
 ) : SafeRepository {
 
     private val accountPrefs = context.getSharedPreferences(ACC_PREF_NAME, Context.MODE_PRIVATE)
@@ -283,6 +307,76 @@ class SafeRepositoryImpl(
         }
     }
 
+    override suspend fun loadSafeInfo(): SafeRepository.SafeInfo {
+        val safeAddress = getSafeAddress()
+        val responses = jsonRpcApi.post(
+            listOf(
+                JsonRpcApi.JsonRpcRequest(
+                    id = 0,
+                    method = "eth_getStorageAt",
+                    params = listOf(safeAddress, BigInteger.ZERO.toHexString(), "latest")
+                ),
+                JsonRpcApi.JsonRpcRequest(
+                    id = 1,
+                    method = "eth_call",
+                    params = listOf(
+                        mapOf(
+                            "to" to safeAddress,
+                            "data" to GnosisSafe.GetOwners.encode()
+                        ), "latest"
+                    )
+                ),
+                JsonRpcApi.JsonRpcRequest(
+                    id = 2,
+                    method = "eth_call",
+                    params = listOf(
+                        mapOf(
+                            "to" to safeAddress,
+                            "data" to GnosisSafe.GetThreshold.encode()
+                        ), "latest"
+                    )
+                )
+            )
+        )
+        val masterCopy = responses[0].result!!.asEthereumAddress()!!
+        val owners = GnosisSafe.GetOwners.decode(responses[1].result!!).param0.items
+        val threshold = GnosisSafe.GetThreshold.decode(responses[2].result!!).param0.value
+        return SafeRepository.SafeInfo(safeAddress, masterCopy, owners, threshold)
+    }
+
+    override suspend fun loadPendingTransactions(): List<SafeRepository.PendingSafeTx> {
+        val safeAddress = getSafeAddress()
+        val transactions = transactionServiceApi.loadTransactions(safeAddress.asEthereumAddressChecksumString())
+        return transactions.results.mapNotNull {
+            if (it.isExecuted) return@mapNotNull null
+            SafeRepository.PendingSafeTx(
+                hash = it.safeTxHash,
+                tx = SafeRepository.SafeTx(
+                    to = it.to?.asEthereumAddress() ?: Solidity.Address(BigInteger.ZERO),
+                    value = it.value.decimalAsBigIntegerOrNull() ?: BigInteger.ZERO,
+                    data = it.data ?: "",
+                    operation = it.operation.toOperation()
+                ),
+                execInfo = SafeRepository.SafeTxExecInfo(
+                    baseGas = it.baseGas.decimalAsBigIntegerOrNull() ?: BigInteger.ZERO,
+                    txGas = it.safeTxGas.decimalAsBigIntegerOrNull() ?: BigInteger.ZERO,
+                    gasPrice = it.gasPrice.decimalAsBigIntegerOrNull() ?: BigInteger.ZERO,
+                    gasToken = it.gasToken?.asEthereumAddress() ?: Solidity.Address(BigInteger.ZERO),
+                    refundReceiver = it.refundReceiver?.asEthereumAddress() ?: Solidity.Address(BigInteger.ZERO),
+                    nonce = it.nonce.decimalAsBigIntegerOrNull() ?: BigInteger.ZERO
+                ),
+                confirmations = it.confirmations.map { confirmations -> confirmations.owner.asEthereumAddress()!! }
+            )
+        }
+    }
+
+    private fun Int.toOperation() =
+        when (this) {
+            0 -> SafeRepository.SafeTx.Operation.CALL
+            1 -> SafeRepository.SafeTx.Operation.DELEGATE
+            else -> throw IllegalArgumentException("Unsupported operation")
+        }
+
     override fun addToReferenceBalance(value: BigInteger) {
         val prev = accountPrefs.getString(PREF_KEY_REFERENCE_BALANCE, null)?.hexAsBigIntegerOrNull() ?: return
         accountPrefs.edit { putString(PREF_KEY_REFERENCE_BALANCE, (prev + value).toHexString()) }
@@ -321,6 +415,7 @@ class SafeRepositoryImpl(
             estimate.safeTxGas.decimalAsBigInteger(),
             estimate.gasPrice.decimalAsBigInteger(),
             estimate.gasToken,
+            Solidity.Address(BigInteger.ZERO),
             estimate.lastUsedNonce?.decimalAsBigInteger()?.let { it + BigInteger.ONE } ?: BigInteger.ZERO
         )
     }
