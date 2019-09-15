@@ -5,11 +5,12 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.lifecycle.liveData
-import androidx.lifecycle.viewModelScope
 import de.thegerman.simplesafe.*
 import de.thegerman.simplesafe.repositories.SafeRepository
 import de.thegerman.simplesafe.ui.base.BaseActivity
 import de.thegerman.simplesafe.ui.base.BaseViewModel
+import de.thegerman.simplesafe.ui.base.LoadingViewModel
+import de.thegerman.simplesafe.ui.transactions.confirmation.TransactionConfirmationDialog
 import kotlinx.android.synthetic.main.screen_auto_top_up.*
 import kotlinx.coroutines.*
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -22,9 +23,8 @@ import java.math.BigInteger
 
 @ExperimentalCoroutinesApi
 abstract class AutoTopUpViewModelContract : BaseViewModel<AutoTopUpViewModelContract.State>() {
-    abstract fun enableAutoTopUp()
+    abstract fun getTx(): SafeRepository.SafeTx
     data class State(
-        val loading: Boolean,
         val enabled: Boolean?,
         override var viewAction: ViewAction?
     ) : BaseViewModel.State
@@ -40,12 +40,7 @@ class AutoTopUpViewModel(
         for (state in stateChannel.openSubscription()) emit(state)
     }
 
-    private val loadingErrorHandler = CoroutineExceptionHandler { context, e ->
-        viewModelScope.launch { updateState { copy(loading = false) } }
-        coroutineErrorHandler.handleException(context, e)
-    }
-
-    override fun initialState() = State(false, null, null)
+    override fun initialState() = State(null, null)
 
     private suspend fun monitorBalances() {
 
@@ -75,19 +70,7 @@ class AutoTopUpViewModel(
         updateState { copy(enabled = topUpModule != null) }
     }
 
-
-    override fun enableAutoTopUp() {
-        if (currentState().loading) return
-        loadingLaunch {
-            updateState { copy(loading = true) }
-            safeRepository.getPendingTransactionHash() ?: run {
-                val tx = buildEnableTx()
-                val execInfo = safeRepository.safeTransactionExecInfo(tx)
-                safeRepository.submitSafeTransaction(tx, execInfo)
-            }
-            updateState { copy(loading = false) }
-        }
-    }
+    override fun getTx() = buildEnableTx()
 
     private fun buildEnableTx(): SafeRepository.SafeTx {
         val initData = TopUpModule.Setup.encode(
@@ -120,10 +103,6 @@ class AutoTopUpViewModel(
         )
     }
 
-    private fun loadingLaunch(block: suspend CoroutineScope.() -> Unit) {
-        safeLaunch(loadingErrorHandler, block)
-    }
-
     companion object {
         private val TOP_UP_ADDRESS = BuildConfig.TOP_UP_MODULE_ADDRESS.asEthereumAddress()!!
     }
@@ -144,12 +123,12 @@ class AutoTopUpActivity : BaseActivity<AutoTopUpViewModelContract.State, AutoTop
     override fun updateState(state: AutoTopUpViewModelContract.State) {
         auto_top_up_status_txt.setOnClickListener(null)
         when {
-            state.loading || state.enabled == null -> auto_top_up_status_txt.text = "Loading ..."
+            state.enabled == null -> auto_top_up_status_txt.text = "Loading ..."
             state.enabled -> auto_top_up_status_txt.text = "Enabled"
             else -> {
                 auto_top_up_status_txt.text = "Click to enable"
                 auto_top_up_status_txt.setOnClickListener {
-                    viewModel.enableAutoTopUp()
+                    TransactionConfirmationDialog(this, viewModel.getTx()).show()
                 }
             }
         }

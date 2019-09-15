@@ -15,6 +15,7 @@ import de.thegerman.simplesafe.R
 import de.thegerman.simplesafe.repositories.SafeRepository
 import de.thegerman.simplesafe.ui.base.BaseActivity
 import de.thegerman.simplesafe.ui.base.BaseViewModel
+import de.thegerman.simplesafe.ui.transactions.confirmation.TransactionConfirmationDialog
 import de.thegerman.simplesafe.utils.shiftedString
 import kotlinx.android.synthetic.main.screen_withdraw.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -47,6 +48,8 @@ abstract class WithdrawViewModelContract : BaseViewModel<WithdrawViewModelContra
         val txHash: String?,
         override var viewAction: ViewAction?
     ) : BaseViewModel.State
+
+    data class ConfirmTx(val tx: SafeRepository.SafeTx, val execInfo: SafeRepository.SafeTxExecInfo): ViewAction
 }
 
 @ExperimentalCoroutinesApi
@@ -126,14 +129,13 @@ class WithdrawViewModel(
             try {
                 updateState { copy(submitting = true) }
                 with(currentState()) {
-                    val tx = buildWithdrawTx(value!!, BigInteger.ZERO, receipient!!)
-                    val execInfo = safeRepository.safeTransactionExecInfo(tx).let {
+                    val estimateTx = buildWithdrawTx(value!!, BigInteger.ZERO, receipient!!)
+                    val execInfo = safeRepository.safeTransactionExecInfo(estimateTx).let {
                         it.copy(baseGas = it.baseGas + BigInteger.valueOf(1000))
                     }
                     check(balance != null && execInfo.fees + value <= balance) { "Cannot submit transaction" }
-                    val txHash = safeRepository.submitSafeTransaction(buildWithdrawTx(value, execInfo.fees, receipient), execInfo)
-                    safeRepository.removeFromReferenceBalance(execInfo.fees + value)
-                    updateState { copy(txHash = txHash) }
+                    val tx = buildWithdrawTx(value, execInfo.fees, receipient)
+                    updateState { copy(txHash = txHash, viewAction = ConfirmTx(tx, execInfo)) }
                 }
             } finally {
                 updateState { copy(submitting = false) }
@@ -219,6 +221,13 @@ class WithdrawActivity : BaseActivity<WithdrawViewModelContract.State, WithdrawV
         withdraw_submit_btn.isVisible = state.canSubmit
         withdraw_submit_btn.isEnabled = !state.submitting
         state.txHash?.let { finish() }
+    }
+
+    override fun performAction(viewAction: BaseViewModel.ViewAction) {
+        when(viewAction) {
+            is WithdrawViewModelContract.ConfirmTx -> TransactionConfirmationDialog(this, viewAction.tx, viewAction.execInfo).show()
+            else -> super.performAction(viewAction)
+        }
     }
 
     companion object {

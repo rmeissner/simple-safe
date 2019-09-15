@@ -17,16 +17,18 @@ abstract class BaseViewModel<T : BaseViewModel.State> : ViewModel() {
         var viewAction: ViewAction?
     }
 
-    sealed class ViewAction {
-        data class ShowToast(val message: String) : ViewAction()
-    }
+    interface ViewAction
+
+    data class ShowToast(val message: String) : ViewAction
 
     @Suppress("LeakingThis")
     protected val stateChannel = ConflatedBroadcastChannel(initialState())
 
-    protected val coroutineErrorHandler = CoroutineExceptionHandler { _, e ->
-        e.printStackTrace()
-        viewModelScope.launch { updateState(true) { viewAction = ViewAction.ShowToast(e.message ?: "An error occurred"); this } }
+    protected val coroutineErrorHandler by lazy {
+        CoroutineExceptionHandler { _, e ->
+            e.printStackTrace()
+            viewModelScope.launch { updateState(true) { viewAction = ShowToast(e.message ?: "An error occurred"); this } }
+        }
     }
 
     protected fun currentState(): T = stateChannel.value

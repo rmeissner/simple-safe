@@ -21,6 +21,7 @@ import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.ResolvableApiException
 import de.thegerman.simplesafe.R
 import de.thegerman.simplesafe.ui.base.BaseActivity
+import de.thegerman.simplesafe.ui.join.JoinActivity
 import de.thegerman.simplesafe.ui.main.MainActivity
 import kotlinx.android.synthetic.main.screen_intro.*
 import kotlinx.android.synthetic.main.screen_intro_slider_create.view.*
@@ -140,6 +141,10 @@ class IntroActivity : BaseActivity<IntroViewModelContract.State, IntroViewModelC
                 view.intro_recover_btn.setOnClickListener {
                     viewModel.credentialsRequest(credentialsClient)
                 }
+
+                view.intro_join_btn.setOnClickListener {
+                    startActivity(JoinActivity.createIntent(this@IntroActivity))
+                }
             }
         }
 
@@ -155,6 +160,7 @@ class IntroActivity : BaseActivity<IntroViewModelContract.State, IntroViewModelC
             createView.intro_progress.isVisible = state.loading
             createView.intro_new_account_btn.isVisible = !state.setup && !state.loading
             createView.intro_recover_btn.isVisible = !state.setup && !state.loading
+            createView.intro_join_btn.isVisible = !state.setup && !state.loading
         }
 
         override fun instantiateItem(container: ViewGroup, position: Int): Any {

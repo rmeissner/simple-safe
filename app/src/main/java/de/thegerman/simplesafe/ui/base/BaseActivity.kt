@@ -21,9 +21,9 @@ abstract class BaseActivity<S: BaseViewModel.State, T: BaseViewModel<S>>: AppCom
         })
     }
 
-    protected fun performAction(viewAction: BaseViewModel.ViewAction) {
+    protected open fun performAction(viewAction: BaseViewModel.ViewAction) {
         when (viewAction) {
-            is BaseViewModel.ViewAction.ShowToast -> {
+            is BaseViewModel.ShowToast -> {
                 Toast.makeText(this, viewAction.message, Toast.LENGTH_SHORT).show()
             }
         }

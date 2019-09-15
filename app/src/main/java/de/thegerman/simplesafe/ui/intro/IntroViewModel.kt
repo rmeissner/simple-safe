@@ -10,6 +10,8 @@ import com.google.android.gms.auth.api.credentials.CredentialsClient
 import de.thegerman.simplesafe.R
 import de.thegerman.simplesafe.repositories.SafeRepository
 import de.thegerman.simplesafe.ui.base.BaseViewModel
+import de.thegerman.simplesafe.ui.base.LoadingViewModel
+import de.thegerman.simplesafe.ui.transactions.confirmation.TransactionConfirmationContract
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -19,7 +21,7 @@ import pm.gnosis.utils.asEthereumAddress
 
 
 @ExperimentalCoroutinesApi
-abstract class IntroViewModelContract : BaseViewModel<IntroViewModelContract.State>() {
+abstract class IntroViewModelContract : LoadingViewModel<IntroViewModelContract.State>() {
     data class State(
         val loading: Boolean,
         val setup: Boolean,
@@ -46,10 +48,7 @@ class IntroViewModel(
     private val safeRepository: SafeRepository
 ) : IntroViewModelContract() {
 
-    private val loadingErrorHandler = CoroutineExceptionHandler { context, e ->
-        viewModelScope.launch { updateState { copy(recoverError = null, loading = false) } }
-        coroutineErrorHandler.handleException(context, e)
-    }
+    override fun onLoadingError(state: State, e: Throwable) = state.copy(loading = false)
 
     override fun initialState() = State(loading = false, setup = false, recoverError = null, viewAction = null)
 
@@ -118,10 +117,6 @@ class IntroViewModel(
         loadingLaunch {
             updateState { copy(setup = true) }
         }
-    }
-
-    private fun loadingLaunch(block: suspend CoroutineScope.() -> Unit) {
-        safeLaunch(loadingErrorHandler, block)
     }
 
 }

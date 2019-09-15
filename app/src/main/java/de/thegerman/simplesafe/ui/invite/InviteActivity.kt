@@ -10,9 +10,10 @@ import de.thegerman.simplesafe.R
 import de.thegerman.simplesafe.repositories.SafeRepository
 import de.thegerman.simplesafe.ui.base.BaseActivity
 import de.thegerman.simplesafe.ui.base.BaseViewModel
+import de.thegerman.simplesafe.ui.base.LoadingViewModel
+import de.thegerman.simplesafe.ui.transactions.confirmation.TransactionConfirmationDialog
 import kotlinx.android.synthetic.main.screen_invite.*
 import kotlinx.coroutines.CoroutineExceptionHandler
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
@@ -21,11 +22,13 @@ import pm.gnosis.utils.asEthereumAddress
 import java.math.BigInteger
 
 @ExperimentalCoroutinesApi
-abstract class InviteContract : BaseViewModel<InviteContract.State>() {
+abstract class InviteContract : LoadingViewModel<InviteContract.State>() {
 
     abstract fun addDevice(input: String)
 
     data class State(val loading: Boolean, override var viewAction: ViewAction?) : BaseViewModel.State
+
+    data class ConfirmTx(val tx: SafeRepository.SafeTx) : ViewAction
 }
 
 @ExperimentalCoroutinesApi
@@ -55,16 +58,11 @@ class InviteViewModel(
                 data = GnosisSafe.AddOwnerWithThreshold.encode(device, Solidity.UInt256(safeInfo.threshold)),
                 operation = SafeRepository.SafeTx.Operation.CALL
             )
-            val execInfo = safeRepository.safeTransactionExecInfo(tx)
-            val txHash = safeRepository.submitSafeTransaction(tx, execInfo)
-            println("tx hash: $txHash")
-            updateState { copy(loading = false) }
+            updateState { copy(loading = false, viewAction = ConfirmTx(tx)) }
         }
     }
 
-    private fun loadingLaunch(block: suspend CoroutineScope.() -> Unit) {
-        safeLaunch(loadingErrorHandler, block)
-    }
+    override fun onLoadingError(state: State, e: Throwable) = state.copy(loading = false)
 
     override fun initialState() = State(false, null)
 }
@@ -81,6 +79,13 @@ class InviteActivity : BaseActivity<InviteContract.State, InviteContract>() {
 
         invite_submit_btn.setOnClickListener {
             viewModel.addDevice(invite_address_input.text.toString())
+        }
+    }
+
+    override fun performAction(viewAction: BaseViewModel.ViewAction) {
+        when (viewAction) {
+            is InviteContract.ConfirmTx -> TransactionConfirmationDialog(this, viewAction.tx).show()
+            else -> super.performAction(viewAction)
         }
     }
 

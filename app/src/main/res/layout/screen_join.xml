@@ -107,12 +107,10 @@
         android:paddingEnd="64dp"
         android:textSize="18sp"
         android:textColor="@color/white"
-        android:visibility="gone"
         android:textStyle="bold"
         app:layout_constraintTop_toTopOf="@id/join_value_divider"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:visibility="visible" />
+        app:layout_constraintStart_toStartOf="parent" />
     <View
         android:id="@+id/join_address_divider"
         android:layout_width="match_parent"

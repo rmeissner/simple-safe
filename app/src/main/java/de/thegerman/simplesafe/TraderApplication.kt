@@ -9,8 +9,8 @@ import de.thegerman.simplesafe.data.TransactionServiceApi
 import de.thegerman.simplesafe.data.adapter.*
 import de.thegerman.simplesafe.repositories.SafeRepository
 import de.thegerman.simplesafe.repositories.SafeRepositoryImpl
-import de.thegerman.simplesafe.transactions.pending.PendingTxContract
-import de.thegerman.simplesafe.transactions.pending.PendingTxViewModel
+import de.thegerman.simplesafe.ui.account.AccountContract
+import de.thegerman.simplesafe.ui.account.AccountViewModel
 import de.thegerman.simplesafe.ui.auto_top_up.AutoTopUpViewModel
 import de.thegerman.simplesafe.ui.auto_top_up.AutoTopUpViewModelContract
 import de.thegerman.simplesafe.ui.deposit.DepositViewModel
@@ -23,6 +23,10 @@ import de.thegerman.simplesafe.ui.join.JoinContract
 import de.thegerman.simplesafe.ui.join.JoinViewModel
 import de.thegerman.simplesafe.ui.main.MainViewModel
 import de.thegerman.simplesafe.ui.main.MainViewModelContract
+import de.thegerman.simplesafe.ui.transactions.confirmation.TransactionConfirmationContract
+import de.thegerman.simplesafe.ui.transactions.confirmation.TransactionConfirmationViewModel
+import de.thegerman.simplesafe.ui.transactions.pending.PendingTxContract
+import de.thegerman.simplesafe.ui.transactions.pending.PendingTxViewModel
 import de.thegerman.simplesafe.ui.withdraw.WithdrawViewModel
 import de.thegerman.simplesafe.ui.withdraw.WithdrawViewModelContract
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -34,6 +38,7 @@ import org.koin.dsl.module
 import pm.gnosis.mnemonic.Bip39
 import pm.gnosis.mnemonic.Bip39Generator
 import pm.gnosis.mnemonic.android.AndroidWordListProvider
+import pm.gnosis.model.Solidity
 import pm.gnosis.svalinn.common.PreferencesManager
 import pm.gnosis.svalinn.security.EncryptionManager
 import pm.gnosis.svalinn.security.FingerprintHelper
@@ -96,8 +101,16 @@ class TraderApplication : Application() {
         viewModel<DepositViewModelContract> { DepositViewModel(get(), get()) }
         viewModel<AutoTopUpViewModelContract> { AutoTopUpViewModel(get()) }
         viewModel<InviteContract> { InviteViewModel(get()) }
-        viewModel<JoinContract> { JoinViewModel() }
+        viewModel<JoinContract> { JoinViewModel(get(), get()) }
         viewModel<PendingTxContract> { PendingTxViewModel(get()) }
+        viewModel<AccountContract> { AccountViewModel(get()) }
+        viewModel<TransactionConfirmationContract> { (
+                                                         transaction: SafeRepository.SafeTx,
+                                                         executionInfo: SafeRepository.SafeTxExecInfo,
+                                                         confirmations: List<Pair<Solidity.Address, String?>>
+                                                     ) ->
+            TransactionConfirmationViewModel(transaction, executionInfo, confirmations, get())
+        }
     }
 
     private val apiModule = module {

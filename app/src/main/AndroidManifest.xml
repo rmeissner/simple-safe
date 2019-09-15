@@ -47,7 +47,7 @@
             android:screenOrientation="portrait" />
         <activity android:name=".ui.join.JoinActivity" />
         <activity android:name=".ui.invite.InviteActivity" />
-        <activity android:name=".transactions.pending.PendingTxActivity" />
+        <activity android:name="de.thegerman.simplesafe.ui.transactions.pending.PendingTxActivity" />
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />

@@ -52,7 +52,7 @@ android {
             applicationIdSuffix ".debug"
             versionNameSuffix "-debug"
             minifyEnabled false
-            buildConfigField javaTypes.STRING, "PAYMENT_TOKEN_ADDRESS", asString(getKey("PAYMENT_TOKEN_ADDRESS", "0x0000000000000000000000000000000000000000"))
+            //buildConfigField javaTypes.STRING, "PAYMENT_TOKEN_ADDRESS", asString(getKey("PAYMENT_TOKEN_ADDRESS", "0x0000000000000000000000000000000000000000"))
         }
 
         nyan {
@@ -92,9 +92,12 @@ dependencies {
     implementation "androidx.core:core-ktx:${versions.androidx_core_ktx}"
     implementation "androidx.constraintlayout:constraintlayout:${versions.androidx_constraint_layout}"
     implementation "androidx.recyclerview:recyclerview:$versions.androidx_recycler_view"
+    implementation "androidx.swiperefreshlayout:swiperefreshlayout:${versions.androidx_swipe_refresh}"
 
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$versions.androidx_lifecycle"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$versions.androidx_lifecycle"
+
+    implementation "com.google.android.material:material:$versions.material"
 
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$versions.kotlinx_coroutines"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$versions.kotlinx_coroutines"

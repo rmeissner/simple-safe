@@ -33,9 +33,11 @@ data class ServiceTransaction(
 @JsonClass(generateAdapter = true)
 data class ServiceConfirmation(
     @Json(name = "owner") val owner: String,
-    @Json(name = "submissionDate") val submissionDate: String
+    @Json(name = "submissionDate") val submissionDate: String,
+    @Json(name = "signature") val signature: String?
 )
 
+@JsonClass(generateAdapter = true)
 data class ServiceTransactionRequest(
     @Json(name = "to") val to: String?,
     @Json(name = "value") val value: String,
@@ -50,9 +52,11 @@ data class ServiceTransactionRequest(
     @Json(name = "contractTransactionHash") val safeTxHash: String,
     @Json(name = "sender") val sender: String,
     @Json(name = "confirmationType") val confirmationType: String,
-    @Json(name = "signature") val signature: String
+    @Json(name = "signature") val signature: String?,
+    @Json(name = "transactionHash") val transactionHash: String? = null
 ) {
     companion object {
-        private const val CONFIRMATION = "CONFIRMATION"
+        const val CONFIRMATION = "CONFIRMATION"
+        const val EXECUTION = "EXECUTION"
     }
 }

@@ -8,15 +8,14 @@ import de.thegerman.simplesafe.R
 import de.thegerman.simplesafe.data.JsonRpcApi
 import de.thegerman.simplesafe.data.RelayServiceApi
 import de.thegerman.simplesafe.data.TransactionServiceApi
-import de.thegerman.simplesafe.data.models.EstimateParams
-import de.thegerman.simplesafe.data.models.ExecuteParams
-import de.thegerman.simplesafe.data.models.RelaySafeCreationParams
-import de.thegerman.simplesafe.data.models.ServiceSignature
+import de.thegerman.simplesafe.data.models.*
 import de.thegerman.simplesafe.repositories.SafeRepository.Safe
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.async
 import kotlinx.coroutines.rx2.await
 import okio.ByteString
+import org.walleth.khex.toHexString
+import pm.gnosis.crypto.ECDSASignature
 import pm.gnosis.crypto.KeyGenerator
 import pm.gnosis.crypto.KeyPair
 import pm.gnosis.crypto.utils.Sha3Utils
@@ -26,7 +25,6 @@ import pm.gnosis.model.Solidity
 import pm.gnosis.svalinn.common.utils.edit
 import pm.gnosis.svalinn.security.EncryptionManager
 import pm.gnosis.utils.*
-import java.lang.IllegalArgumentException
 import java.math.BigInteger
 import java.nio.charset.Charset
 
@@ -34,7 +32,13 @@ interface SafeRepository {
 
     fun isInitialized(): Boolean
 
+    suspend fun loadDeviceId(): Solidity.Address
+
     suspend fun loadSafe(): Safe
+
+    suspend fun validateSafe(address: Solidity.Address): Boolean
+
+    suspend fun joinSafe(address: Solidity.Address): Safe
 
     suspend fun loadMnemonic(): String
 
@@ -44,10 +48,7 @@ interface SafeRepository {
 
     suspend fun triggerSafeDeployment()
 
-    suspend fun submitSafeTransaction(
-        transaction: SafeTx,
-        execInfo: SafeTxExecInfo
-    ): String
+    suspend fun confirmSafeTransaction(transaction: SafeTx, execInfo: SafeTxExecInfo, confirmations: List<Pair<Solidity.Address, String?>>?): String?
 
     suspend fun recover(safe: Solidity.Address, mnemonic: String)
 
@@ -91,7 +92,7 @@ interface SafeRepository {
         val hash: String,
         val tx: SafeTx,
         val execInfo: SafeTxExecInfo,
-        val confirmations: List<Solidity.Address>
+        val confirmations: List<Pair<Solidity.Address, String?>>
     )
 
     data class SafeTx(
@@ -155,9 +156,24 @@ class SafeRepositoryImpl(
             throw RuntimeException("Could not setup encryption")
     }
 
+    override suspend fun loadDeviceId(): Solidity.Address {
+        return getKeyPair().address.toAddress()
+    }
+
     override suspend fun loadSafe(): Safe {
         enforceEncryption()
         return Safe(getSafeAddress(), getSafeStatus())
+    }
+
+    override suspend fun validateSafe(address: Solidity.Address) =
+        relayServiceApi.safeFundStatus(address.asEthereumAddressChecksumString()).blockNumber != null
+
+    override suspend fun joinSafe(address: Solidity.Address): Safe {
+        enforceEncryption()
+        accountPrefs.edit {
+            putString(PREF_KEY_SAFE_ADDRESS, address.asEthereumAddressString())
+        }
+        return Safe(address, getSafeStatus())
     }
 
     override suspend fun loadMnemonic(): String {
@@ -346,9 +362,11 @@ class SafeRepositoryImpl(
 
     override suspend fun loadPendingTransactions(): List<SafeRepository.PendingSafeTx> {
         val safeAddress = getSafeAddress()
+        val currentNonce = loadSafeNonce(safeAddress)
         val transactions = transactionServiceApi.loadTransactions(safeAddress.asEthereumAddressChecksumString())
         return transactions.results.mapNotNull {
-            if (it.isExecuted) return@mapNotNull null
+            val nonce = it.nonce.decimalAsBigIntegerOrNull()
+            if (it.isExecuted || nonce == null || nonce < currentNonce) return@mapNotNull null
             SafeRepository.PendingSafeTx(
                 hash = it.safeTxHash,
                 tx = SafeRepository.SafeTx(
@@ -363,9 +381,11 @@ class SafeRepositoryImpl(
                     gasPrice = it.gasPrice.decimalAsBigIntegerOrNull() ?: BigInteger.ZERO,
                     gasToken = it.gasToken?.asEthereumAddress() ?: Solidity.Address(BigInteger.ZERO),
                     refundReceiver = it.refundReceiver?.asEthereumAddress() ?: Solidity.Address(BigInteger.ZERO),
-                    nonce = it.nonce.decimalAsBigIntegerOrNull() ?: BigInteger.ZERO
+                    nonce = nonce
                 ),
-                confirmations = it.confirmations.map { confirmations -> confirmations.owner.asEthereumAddress()!! }
+                confirmations = it.confirmations.map { confirmation ->
+                    confirmation.owner.asEthereumAddress()!! to confirmation.signature
+                }
             )
         }
     }
@@ -410,23 +430,40 @@ class SafeRepositoryImpl(
                 gasToken
             )
         )
+        val nonce = loadSafeNonce(safeAddress)
+        val relayNonce = estimate.lastUsedNonce?.decimalAsBigInteger()?.let { it + BigInteger.ONE } ?: BigInteger.ZERO
         return SafeRepository.SafeTxExecInfo(
             estimate.dataGas.decimalAsBigInteger(),
             estimate.safeTxGas.decimalAsBigInteger(),
             estimate.gasPrice.decimalAsBigInteger(),
             estimate.gasToken,
             Solidity.Address(BigInteger.ZERO),
-            estimate.lastUsedNonce?.decimalAsBigInteger()?.let { it + BigInteger.ONE } ?: BigInteger.ZERO
+            relayNonce.max(nonce)
         )
     }
 
-    override suspend fun submitSafeTransaction(
+    private suspend fun loadSafeNonce(safeAddress: Solidity.Address): BigInteger {
+        return GnosisSafe.Nonce.decode(
+            jsonRpcApi.post(
+                JsonRpcApi.JsonRpcRequest(
+                    method = "eth_call",
+                    params = listOf(
+                        mapOf(
+                            "to" to safeAddress,
+                            "data" to GnosisSafe.Nonce.encode()
+                        ), "latest"
+                    )
+                )
+            ).result!!
+        ).param0.value
+    }
+
+    override suspend fun confirmSafeTransaction(
         transaction: SafeRepository.SafeTx,
-        execInfo: SafeRepository.SafeTxExecInfo
-    ): String {
+        execInfo: SafeRepository.SafeTxExecInfo,
+        confirmations: List<Pair<Solidity.Address, String?>>?
+    ): String? {
         val safeAddress = getSafeAddress()
-        println("estimate $execInfo")
-        val nonce = execInfo.nonce
         val hash =
             calculateHash(
                 safeAddress,
@@ -438,10 +475,76 @@ class SafeRepositoryImpl(
                 execInfo.baseGas,
                 execInfo.gasPrice,
                 execInfo.gasToken,
-                nonce
+                execInfo.nonce
             )
 
-        val signature = getKeyPair().sign(hash)
+        val keyPair = getKeyPair()
+        val deviceId = keyPair.address.toAddress()
+        val signature = keyPair.sign(hash)
+
+        val confirmation = ServiceTransactionRequest(
+            to = transaction.to.asEthereumAddressChecksumString(),
+            value = transaction.value.asDecimalString(),
+            data = transaction.data,
+            operation = transaction.operation.id,
+            gasToken = execInfo.gasToken.asEthereumAddressChecksumString(),
+            safeTxGas = execInfo.txGas.asDecimalString(),
+            baseGas = execInfo.baseGas.asDecimalString(),
+            gasPrice = execInfo.gasPrice.asDecimalString(),
+            refundReceiver = execInfo.refundReceiver.asEthereumAddressChecksumString(),
+            nonce = execInfo.nonce.asDecimalString(),
+            safeTxHash = hash.toHexString(),
+            sender = deviceId.asEthereumAddressChecksumString(),
+            confirmationType = ServiceTransactionRequest.CONFIRMATION,
+            signature = signature.toSignatureString()
+        )
+        transactionServiceApi.confirmTransaction(safeAddress.asEthereumAddressChecksumString(), confirmation)
+
+        val info = loadSafeInfo()
+        // Relay required refund
+        if (execInfo.gasPrice == BigInteger.ZERO) return null
+
+        // Relay only allows ECDSA signatures
+        val signatureMap = mutableMapOf<Solidity.Address, Pair<Solidity.Address, ECDSASignature>>()
+        confirmations?.forEach { (signer, signature) ->
+            if (signature == null) return@forEach
+            signatureMap[signer] = signer to signature.removeHexPrefix().toECDSASignature()
+        }
+        signatureMap[deviceId] = deviceId to signature
+        if (info.threshold > signatureMap.size.toBigInteger()) return null
+
+        val ethHash = submitSafeTransaction(transaction, execInfo, signatureMap.values)
+        try {
+            transactionServiceApi.confirmTransaction(
+                safeAddress.asEthereumAddressChecksumString(),
+                confirmation.copy(transactionHash = ethHash, signature = null, confirmationType = ServiceTransactionRequest.EXECUTION)
+            )
+        } catch (e: Exception) {
+            // Transaction has been submitted, status update on history service is secondary
+            e.printStackTrace()
+        }
+        return ethHash
+    }
+
+    private fun ECDSASignature.toSignatureString() =
+        r.toString(16).padStart(64, '0').substring(0, 64) +
+                s.toString(16).padStart(64, '0').substring(0, 64) +
+                v.toString(16).padStart(2, '0')
+
+    private fun String.toECDSASignature(): ECDSASignature {
+        require(length == 130)
+        val r = BigInteger(substring(0, 64), 16)
+        val s = BigInteger(substring(64, 128), 16)
+        val v = substring(128, 130).toByte(16)
+        return ECDSASignature(r, s).apply { this.v = v }
+    }
+
+    private suspend fun submitSafeTransaction(
+        transaction: SafeRepository.SafeTx,
+        execInfo: SafeRepository.SafeTxExecInfo,
+        confirmations: Collection<Pair<Solidity.Address, ECDSASignature>>
+    ): String {
+        val safeAddress = getSafeAddress()
         val response = relayServiceApi.execute(
             safeAddress.asEthereumAddressChecksumString(),
             ExecuteParams(
@@ -449,12 +552,12 @@ class SafeRepositoryImpl(
                 transaction.value.asDecimalString(),
                 transaction.data,
                 transaction.operation.id,
-                listOf(ServiceSignature.fromSignature(signature)),
+                confirmations.sortedBy { it.first.value }.map { ServiceSignature.fromSignature(it.second) },
                 execInfo.txGas.asDecimalString(),
                 execInfo.baseGas.asDecimalString(),
                 execInfo.gasPrice.asDecimalString(),
                 execInfo.gasToken.asEthereumAddressChecksumString(),
-                nonce.toLong()
+                execInfo.nonce.toLong()
             )
         )
         println("execute $response")

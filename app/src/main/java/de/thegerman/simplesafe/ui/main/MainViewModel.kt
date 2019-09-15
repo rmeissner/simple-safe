@@ -141,7 +141,7 @@ class MainViewModel(
                 updateState { copy(txHash = null) }
             }
             is SafeRepository.TxStatus.Failed ->
-                updateState { copy(txHash = null, viewAction = ViewAction.ShowToast("Transaction failed")) }
+                updateState { copy(txHash = null, viewAction = ShowToast("Transaction failed")) }
             else ->
                 updateState { copy(txHash = null) }
         }
@@ -160,14 +160,13 @@ class MainViewModel(
                 val balance = currentState().balances?.daiBalance ?: return@launch
                 val amount = balance - ONE_DAI.div(BigInteger.valueOf(4)).times(BigInteger.valueOf(3))
                 if (amount < BigInteger.ZERO) return@launch
-                val execInfo = safeRepository.safeTransactionExecInfo(buildInvestTx(amount))
-                val txHash = safeRepository.submitSafeTransaction(buildInvestTx(amount), execInfo)
-                safeRepository.addToReferenceBalance(amount)
-                updateState { copy(txHash = txHash) }
+                TODO("Implement submission")
+                //safeRepository.addToReferenceBalance(amount)
+                //updateState { copy(txHash = txHash) }
             } finally {
                 updateState { copy(submitting = false) }
             }
-            updateBalances()
+            //updateBalances()
         }
     }
 
