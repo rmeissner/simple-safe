@@ -64,10 +64,6 @@ interface SafeRepository {
 
     fun getPendingTransactionHash(): String?
 
-    fun addToReferenceBalance(value: BigInteger)
-
-    fun removeFromReferenceBalance(value: BigInteger)
-
     data class Safe(val address: Solidity.Address, val status: Status) {
         sealed class Status {
             object Ready : Status()
@@ -254,6 +250,7 @@ class SafeRepositoryImpl(
 
     override suspend fun loadSafeBalances(): SafeRepository.SafeBalances {
         val safeAddress = getSafeAddress()
+        // TODO: convert to batched call
         val daiBalance = GlobalScope.async {
             Compound.BalanceOfUnderlying.decode(
                 jsonRpcApi.post(
@@ -284,12 +281,13 @@ class SafeRepositoryImpl(
                 ).result!!
             ).param0.value
         }
-        val cdaiBalanceValue = cdaiBalance.await()
-        val referenceBalance = accountPrefs.getString(PREF_KEY_REFERENCE_BALANCE, null)?.hexAsBigIntegerOrNull() ?: run {
-            accountPrefs.edit { putString(PREF_KEY_REFERENCE_BALANCE, cdaiBalanceValue.toHexString()) }
-            cdaiBalanceValue
-        }
-        return SafeRepository.SafeBalances(daiBalance.await(), cdaiBalanceValue, referenceBalance)
+        val referenceBalance = getReferenceBalance(safeAddress)
+        return SafeRepository.SafeBalances(daiBalance.await(), cdaiBalance.await(), referenceBalance.await())
+    }
+
+    private fun getReferenceBalance(safeAddress: Solidity.Address) = GlobalScope.async {
+        // TODO parse events
+        BigInteger.ONE
     }
 
     override suspend fun loadModules(): List<SafeRepository.SafeModule> {
@@ -396,20 +394,6 @@ class SafeRepositoryImpl(
             1 -> SafeRepository.SafeTx.Operation.DELEGATE
             else -> throw IllegalArgumentException("Unsupported operation")
         }
-
-    override fun addToReferenceBalance(value: BigInteger) {
-        val prev = accountPrefs.getString(PREF_KEY_REFERENCE_BALANCE, null)?.hexAsBigIntegerOrNull() ?: return
-        accountPrefs.edit { putString(PREF_KEY_REFERENCE_BALANCE, (prev + value).toHexString()) }
-    }
-
-    override fun removeFromReferenceBalance(value: BigInteger) {
-        val prev = accountPrefs.getString(PREF_KEY_REFERENCE_BALANCE, null)?.hexAsBigIntegerOrNull() ?: return
-        val new = (prev - value)
-        if (new < BigInteger.ZERO)
-            accountPrefs.edit { remove(PREF_KEY_REFERENCE_BALANCE) }
-        else
-            accountPrefs.edit { putString(PREF_KEY_REFERENCE_BALANCE, (prev - value).toHexString()) }
-    }
 
     override suspend fun triggerSafeDeployment() {
         relayServiceApi.notifySafeFunded(getSafeAddress().asEthereumAddressChecksumString())
@@ -639,7 +623,6 @@ class SafeRepositoryImpl(
         private const val PREF_KEY_SAFE_BLOCK = "accounts.string.safe_block"
         private const val PREF_KEY_SAFE_CREATION_TX = "accounts.string.safe_creation_tx"
 
-        private const val PREF_KEY_REFERENCE_BALANCE = "accounts.string.reference_balance"
         private const val PREF_KEY_PENDING_TRANSACTION_HASH = "accounts.string.pending_transaction_hash"
 
         private const val ENC_PASSWORD = "ThisShouldNotBeHardcoded"

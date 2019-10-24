@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import de.thegerman.simplesafe.repositories.SafeRepository
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ConflatedBroadcastChannel
 
@@ -20,6 +21,7 @@ abstract class BaseViewModel<T : BaseViewModel.State> : ViewModel() {
     interface ViewAction
 
     data class ShowToast(val message: String) : ViewAction
+    data class ConfirmTx(val tx: SafeRepository.SafeTx) : ViewAction
 
     @Suppress("LeakingThis")
     protected val stateChannel = ConflatedBroadcastChannel(initialState())

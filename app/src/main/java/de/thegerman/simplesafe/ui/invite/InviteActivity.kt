@@ -27,19 +27,12 @@ abstract class InviteContract : LoadingViewModel<InviteContract.State>() {
     abstract fun addDevice(input: String)
 
     data class State(val loading: Boolean, override var viewAction: ViewAction?) : BaseViewModel.State
-
-    data class ConfirmTx(val tx: SafeRepository.SafeTx) : ViewAction
 }
 
 @ExperimentalCoroutinesApi
 class InviteViewModel(
     private val safeRepository: SafeRepository
 ) : InviteContract() {
-
-    private val loadingErrorHandler = CoroutineExceptionHandler { context, e ->
-        viewModelScope.launch { updateState { copy(loading = false) } }
-        coroutineErrorHandler.handleException(context, e)
-    }
 
     override val state = liveData {
         for (state in stateChannel.openSubscription()) emit(state)
@@ -79,13 +72,6 @@ class InviteActivity : BaseActivity<InviteContract.State, InviteContract>() {
 
         invite_submit_btn.setOnClickListener {
             viewModel.addDevice(invite_address_input.text.toString())
-        }
-    }
-
-    override fun performAction(viewAction: BaseViewModel.ViewAction) {
-        when (viewAction) {
-            is InviteContract.ConfirmTx -> TransactionConfirmationDialog(this, viewAction.tx).show()
-            else -> super.performAction(viewAction)
         }
     }
 

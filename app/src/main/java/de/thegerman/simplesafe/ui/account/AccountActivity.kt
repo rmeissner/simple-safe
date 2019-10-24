@@ -6,8 +6,10 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.isVisible
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.liveData
+import de.thegerman.simplesafe.BuildConfig
 import de.thegerman.simplesafe.R
 import de.thegerman.simplesafe.repositories.SafeRepository
 import de.thegerman.simplesafe.ui.transactions.pending.PendingTxActivity
@@ -70,6 +72,9 @@ class AccountActivity : BaseActivity<AccountContract.State, AccountContract>() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.screen_account)
+
+        account_settings_divider.isVisible = BuildConfig.DEBUG
+        account_settings_txt.isVisible = BuildConfig.DEBUG
 
         account_back_btn.setOnClickListener { onBackPressed() }
         account_settings_txt.setOnClickListener { startActivity(AutoTopUpActivity.createIntent(this)) }

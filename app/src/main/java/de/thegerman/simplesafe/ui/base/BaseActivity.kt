@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
+import de.thegerman.simplesafe.ui.transactions.confirmation.TransactionConfirmationDialog
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 @ExperimentalCoroutinesApi
@@ -26,6 +27,7 @@ abstract class BaseActivity<S: BaseViewModel.State, T: BaseViewModel<S>>: AppCom
             is BaseViewModel.ShowToast -> {
                 Toast.makeText(this, viewAction.message, Toast.LENGTH_SHORT).show()
             }
+            is BaseViewModel.ConfirmTx -> TransactionConfirmationDialog(this, viewAction.tx).show()
         }
     }
 }

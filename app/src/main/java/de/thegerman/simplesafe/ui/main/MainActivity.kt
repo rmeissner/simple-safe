@@ -10,13 +10,16 @@ import de.thegerman.simplesafe.R
 import de.thegerman.simplesafe.repositories.SafeRepository.Safe
 import de.thegerman.simplesafe.ui.account.AccountActivity
 import de.thegerman.simplesafe.ui.base.BaseActivity
+import de.thegerman.simplesafe.ui.base.BaseViewModel
 import de.thegerman.simplesafe.ui.deposit.DepositActivity
+import de.thegerman.simplesafe.ui.transactions.confirmation.TransactionConfirmationDialog
 import de.thegerman.simplesafe.ui.withdraw.WithdrawActivity
 import de.thegerman.simplesafe.utils.shiftedString
 import kotlinx.android.synthetic.main.screen_main.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import pm.gnosis.svalinn.common.utils.openUrl
+import pm.gnosis.svalinn.common.utils.visible
 
 @ExperimentalCoroutinesApi
 class MainActivity : BaseActivity<MainViewModelContract.State, MainViewModelContract>() {
@@ -38,6 +41,7 @@ class MainActivity : BaseActivity<MainViewModelContract.State, MainViewModelCont
         main_deposit_img.setOnClickListener(depositClickListener)
         main_deposit_txt.setOnClickListener(depositClickListener)
         main_account_img.setOnClickListener { startActivity(AccountActivity.createIntent(this)) }
+        main_invest_btn.setOnClickListener { viewModel.investAll() }
     }
 
     override fun onResume() {
@@ -65,14 +69,17 @@ class MainActivity : BaseActivity<MainViewModelContract.State, MainViewModelCont
             Safe.Status.Ready -> {
                 main_creation_status_txt.text = null
                 main_balances_group.isVisible = true
+                main_invest_btn.isVisible = state.needsApproval
             }
             is Safe.Status.Unfunded -> {
                 main_creation_status_txt.text = "Your Safe needs to be funded with ${status.paymentAmount.shiftedString(18)}"
                 main_balances_group.isVisible = true
+                main_invest_btn.isVisible = state.needsApproval
             }
             else -> {
                 main_creation_status_txt.text = "Your Safe is currently being deployed, please wait ..."
                 main_balances_group.isVisible = !state.loading && !state.showRetry
+                main_invest_btn.isVisible = !state.loading && !state.showRetry
             }
         }
 

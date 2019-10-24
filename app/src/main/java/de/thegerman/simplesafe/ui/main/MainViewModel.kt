@@ -23,6 +23,7 @@ abstract class MainViewModelContract : BaseViewModel<MainViewModelContract.State
         val showRetry: Boolean,
         val safe: SafeRepository.Safe?,
         val balances: SafeRepository.SafeBalances?,
+        val needsApproval: Boolean,
         val submitting: Boolean,
         val txHash: String?,
         override var viewAction: ViewAction?
@@ -38,7 +39,16 @@ class MainViewModel(
     private val safeRepository: SafeRepository
 ) : MainViewModelContract() {
     override fun initialState() =
-        State(loading = false, showRetry = false, safe = null, balances = null, submitting = false, txHash = null, viewAction = null)
+        State(
+            loading = false,
+            showRetry = false,
+            safe = null,
+            balances = null,
+            needsApproval = false,
+            submitting = false,
+            txHash = null,
+            viewAction = null
+        )
 
     override val state = liveData {
         loadSafe()
@@ -92,9 +102,6 @@ class MainViewModel(
                     is SafeRepository.Safe.Status.Unfunded -> {
                         if (status.paymentAmount <= balances.daiBalance) safeRepository.triggerSafeDeployment()
                     }
-                    is SafeRepository.Safe.Status.Ready -> {
-                        //if (balances.daiBalance >= ONE_DAI) investAll()
-                    }
                 }
             } catch (e: Exception) {
                 Log.e("#####", "Check balances error: $e")
@@ -105,7 +112,7 @@ class MainViewModel(
 
     private suspend fun updateBalances(): SafeRepository.SafeBalances {
         val balances = safeRepository.loadSafeBalances()
-        updateState { copy(balances = balances) }
+        updateState { copy(balances = balances, needsApproval = balances.daiBalance >= ONE_DAI) }
         return balances
     }
 
@@ -160,9 +167,7 @@ class MainViewModel(
                 val balance = currentState().balances?.daiBalance ?: return@launch
                 val amount = balance - ONE_DAI.div(BigInteger.valueOf(4)).times(BigInteger.valueOf(3))
                 if (amount < BigInteger.ZERO) return@launch
-                TODO("Implement submission")
-                //safeRepository.addToReferenceBalance(amount)
-                //updateState { copy(txHash = txHash) }
+                updateState { copy(viewAction = ConfirmTx(buildInvestTx(amount))) }
             } finally {
                 updateState { copy(submitting = false) }
             }
